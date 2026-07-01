@@ -2883,23 +2883,26 @@ def procesar_placa_imagen():
 
     except Exception as e:
         print(f"❌ ERROR GENERAL EN RUTA IMAGEN: {e}")
-        if cursor: cursor.close()
-        if conn: conn.close()
+        if cursor: 
+            try: cursor.close()
+            except: pass
+        if conn: 
+            try: conn.close()
+            except: pass
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
 def asistente_ia_segundo_plano():
-    global ultimo_frame_camara, ULTIMAS_DETECCIONES_IA, lock_frame, cola_detecciones
+    global ultimo_frame_camara, ULTIMAS_DETECCIONES_IA, lock_frame, cola_detecciones, RAFAGA_DETECCIONES
     print("[🚀 IA OPTIMIZADA] Motor de asistencia vehicular con estabilización por ráfaga en marcha (Tesseract).")
     
     TIEMPO_COOLDOWN = 3.0  # Margen de maniobra anti-saturación
     
     # Expresión regular estándar para placas peruanas/latinoamericanas:
-    # Acepta combinaciones de 3 letras y 3 números con o sin guion (ej: P4G-564, P3X759, M1R922)
     PATRON_PLACA = r'^[A-Z0-9]{3}-?[A-Z0-9]{3}$|^[A-Z0-9]{2}-?[A-Z0-9]{4}$'
     
     while True:
-        # 1. ESPACIO PARA RESPIRAR: Procesamos ~3 cuadros por segundo (0.15s libera CPU y estabiliza)
+        # 1. ESPACIO PARA RESPIRAR: Procesamos ~3 cuadros por segundo
         time.sleep(0.15)
         
         frame_original = None
@@ -3035,6 +3038,7 @@ def asistente_ia_segundo_plano():
                         tipo_movimiento_ia = "Salida"
                         mensaje_notificacion = "Salida automática registrada por cámara."
                     else:
+                        # 💡 SE CORRIGIÓ AQUÍ: Añadido el valor '1' para 'id_operador' que faltaba en la tupla
                         cursor_live.execute("""
                             INSERT INTO historial_accesos (placa, id_punto_acceso, id_operador, fecha_ingreso, fecha_salida) 
                             VALUES (%s, 1, 1, NOW(), NULL)
@@ -3072,9 +3076,28 @@ def asistente_ia_segundo_plano():
 # 3. TRABAJADOR A (Muestra el video en la pantalla súper fluido sin detenerse jamás)
 def generar_frames_camara():
     global ultimo_frame_camara
-    camara = cv2.VideoCapture(0)
+    
+    # 💡 SE CORRIGIÓ PARA LA NUBE:
+    # Intenta obtener una URL de cámara IP desde las variables de Render, si no existe usa 0 (Local)
+    origen_camara = os.environ.get('RTSP_CAMERA_URL', 0)
+    
+    # Si viene de variable de entorno e intenta ser un número de puerto o índice local
+    if str(origen_camara).isdigit():
+        origen_camara = int(origen_camara)
+
+    camara = cv2.VideoCapture(origen_camara)
+    
     if not camara.isOpened():
-        print("❌ Error: No se pudo acceder a la cámara local.")
+        print(f"❌ Error: No se pudo acceder al origen de cámara: {origen_camara}")
+        # Retornamos un fotograma negro de emergencia para que la etiqueta <img> de la web no se rompa
+        frame_error = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(frame_error, "CAMARA DESCONECTADA / MODO NUBE", (50, 240), 
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+        ret, buffer = cv2.imencode('.jpg', frame_error)
+        if ret:
+            frame_bytes = buffer.tobytes()
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
         return
 
     while True:
