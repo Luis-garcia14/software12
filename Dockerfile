@@ -1,30 +1,26 @@
-# Usamos una imagen de Python ligera estable
-FROM python:3.11-slim
+# 1. Usamos una imagen oficial de Python ligera basada en Debian
+FROM python:3.10-slim
 
-# Evita que Python escriba archivos .pyc y fuerza que la salida de consola sea inmediata
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
-
-# Instalamos Tesseract base y las dependencias gráficas modernas correctas
-RUN apt-get update && apt-get install -y --no-install-recommends \
+# 2. Instalar dependencias del sistema operativo (Tesseract y librerías que OpenCV necesita)
+RUN apt-get update && apt-get install -y \
     tesseract-ocr \
-    libgl1 \
+    tesseract-ocr-spa \
+    libgl1-mesa-glx \
     libglib2.0-0 \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Configurar el directorio de trabajo
+# 3. Crear el directorio de trabajo dentro del servidor
 WORKDIR /app
 
-# Copiar e instalar requerimientos de Python primero
+# 4. Copiar los archivos de dependencias e instalarlos
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar el resto del código del servidor
+# 5. Copiar todo el código de tu proyecto al servidor
 COPY . .
 
-# Exponer el puerto por defecto de Render
+# 6. Exponer el puerto en el que corre tu app de Flask
 EXPOSE 10000
 
-# Comando de arranque optimizado para la memoria RAM de Render Free
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:10000", "--workers", "1", "--threads", "2", "--max-requests", "50", "--preload"]
+# 7. Comando para arrancar tu aplicación (reemplaza 'app:app' si tu archivo principal se llama diferente)
+CMD ["gunicorn", "--bind", "0.0.0.0:10000", "app:app"]
