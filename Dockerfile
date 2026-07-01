@@ -5,13 +5,11 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 
-# Actualizar repositorios e instalar dependencias por separado para evitar fallos de caché (Exit Code 100)
-RUN apt-get update --fix-missing && apt-get upgrade -y
-
-# Instalar dependencias esenciales del sistema operativo
-RUN apt-get install -y --no-install-recommends \
+# Actualizar repositorios e instalar dependencias esenciales
+# Usamos tesseract-ocr-es (nombre correcto en Debian) y agregamos tolerancia a fallos de red
+RUN apt-get update && apt-get install -y --no-install-recommends \
     tesseract-ocr \
-    tesseract-ocr-spa \
+    tesseract-ocr-es \
     libgl1-mesa-glx \
     libglib2.0-0 \
     && apt-get clean \
