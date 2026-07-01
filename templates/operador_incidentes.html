@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestión de Incidentes - EJARAD TIC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link class="fluid-icon" rel="icon" href="data:,">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+        .navbar-custom { background-color: #0f172a; }
+        .card-custom { box-shadow: 0 4px 12px rgba(0,0,0,0.05); border: none; border-radius: 12px; }
+        .table th { background-color: #1e293b; color: white; vertical-align: middle; font-size: 13px; }
+        .table td { font-size: 13px; }
+        .btn-refresh:active i { transform: rotate(180deg); transition: transform 0.2s ease; }
+        .form-label { font-size: 13px; color: #475569; font-weight: 600; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark navbar-custom mb-4 shadow-sm">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand d-flex align-items-center gap-2 fw-bold text-warning" href="#">
+                <i class="bi bi-exclamation-octagon-fill fs-4"></i> BITÁCORA DE INCIDENTES
+            </a>
+            <div class="d-flex align-items-center gap-3">
+                <div>
+                    <a href="javascript:history.back()" class="btn btn-light btn-sm fw-bold"><i class="bi bi-arrow-left"></i> Volver al Panel</a>
+                </div>
+                <a href="/logout" class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+            </div>
+            
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        <div class="row g-4">
+            
+            <div class="col-12 col-lg-4">
+                <div class="card card-custom p-4 bg-white border border-light-subtle shadow-sm">
+                    <div class="mb-3">
+                        <h5 class="fw-bold text-dark m-0"><i class="bi bi-plus-circle-fill text-warning me-2"></i>Registrar Incidente</h5>
+                        <p class="text-muted small">Reporte percances vinculados a una placa vehicular registrada en el sistema.</p>
+                    </div>
+
+                    <form id="formIncidentes" onsubmit="registrarIncidenteOperador(event)">
+                        <div class="mb-3">
+                            <label class="form-label">Placa del Vehículo Responsable / Afectado <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   id="inc_placa" 
+                                   class="form-control font-monospace text-uppercase fw-bold" 
+                                   placeholder="Ej: PAG-564" 
+                                   maxlength="7" 
+                                   pattern="^[A-Z0-9]{3}-[A-Z0-9]{3}$"
+                                   title="El formato debe ser de 3 caracteres, un guion y 3 caracteres (Ej: PAG-564)"
+                                   oninput="aplicarMascaraPlaca(this)"
+                                   required>
+                            <div class="form-text small text-muted">Formato requerido: 3 caracteres + guion automático + 3 caracteres.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Nivel de Gravedad <span class="text-danger">*</span></label>
+                            <select id="inc_gravedad" class="form-select fw-bold text-uppercase" style="font-size: 13px;" required>
+                                <option value="" disabled selected>Seleccione la gravedad...</option>
+                                <option value="leve" class="text-success">🟢 LEVE</option>
+                                <option value="moderada" class="text-warning">🟡 MODERADA</option>
+                                <option value="critica" class="text-danger">🔴 CRÍTICA</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">Descripción Detallada del Suceso <span class="text-danger">*</span></label>
+                            <textarea id="inc_descripcion" class="form-control text-uppercase font-monospace" rows="4" maxlength="500" placeholder="EJ: DAÑO EN BARRERA VEHICULAR POR IMPACTO" required></textarea>
+                            <div class="form-text text-muted text-end small" id="charCount">0 / 500</div>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="reset" class="btn btn-light btn-sm w-50 fw-bold border" onclick="document.getElementById('charCount').textContent = '0 / 500';">Limpiar</button>
+                            <button type="submit" class="btn btn-warning text-dark btn-sm w-50 fw-bold shadow-sm">Guardar Reporte</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-8">
+                <div class="card card-custom p-4 mb-4 bg-white border border-light-subtle shadow-sm">
+                    <h5 class="fw-bold text-secondary mb-3"><i class="bi bi-sliders me-2"></i>Filtros de Búsqueda</h5>
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small">Buscar por Placa</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                                <input type="text" id="filtroPlaca" class="form-control text-uppercase font-monospace fw-bold" placeholder="Ej: PAG-564" oninput="aplicarMascaraPlaca(this); cargarIncidentesOperador();" maxlength="7">
+                            </div>
+                        </div>
+                        <div class="col-12 col-sm-6">
+                            <label class="form-label small">Filtrar por Estado</label>
+                            <select id="filtroEstado" class="form-select" onchange="cargarIncidentesOperador()">
+                                <option value="" selected>Todos los estados</option>
+                                <option value="Pendiente">Pendiente</option>
+                                <option value="Revisado">Revisado</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-custom p-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h5 class="fw-bold m-0 text-dark">Registros Almacenados</h5>
+                        <button type="button" class="btn btn-outline-primary btn-sm btn-refresh d-flex align-items-center gap-1 px-3" onclick="cargarIncidentesOperador()" title="Actualizar tabla">
+                            <i class="bi bi-arrow-clockwise fs-6"></i> Actualizar
+                        </button>
+                    </div>
+
+                    <div class="table-responsive rounded border">
+                        <table class="table table-striped table-hover align-middle m-0 text-center">
+                            <thead>
+                                <tr>
+                                    <th style="width: 15%;">Placa / Unidad</th>
+                                    <th style="width: 12%;">Gravedad</th>
+                                    <th style="width: 18%;">Fecha Reporte</th>
+                                    <th style="width: 18%;">Fecha Revisión</th>
+                                    <th style="width: 12%;">Estado</th>
+                                    <th class="text-start">Detalle de la Observación</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-incidentes-operador">
+                                <tr>
+                                    <td colspan="6" class="text-muted py-4">Cargando bitácora de incidentes...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+        const textarea = document.getElementById('inc_descripcion');
+        textarea.addEventListener('input', () => {
+            document.getElementById('charCount').textContent = `${textarea.value.length} / 500`;
+        });
+
+        document.addEventListener("DOMContentLoaded", () => {
+            cargarIncidentesOperador();
+        });
+
+        function aplicarMascaraPlaca(input) {
+            let valor = input.value.toUpperCase();
+            valor = valor.replace(/[^A-Z0-9-]/g, '');
+            let limpio = valor.replace(/-/g, '');
+            
+            if (limpio.length > 3) {
+                input.value = limpio.slice(0, 3) + '-' + limpio.slice(3, 6);
+            } else {
+                input.value = limpio;
+            }
+        }
+
+        async function registrarIncidenteOperador(event) {
+            event.preventDefault();
+            const placa = document.getElementById('inc_placa').value.trim().toUpperCase();
+            const gravedad = document.getElementById('inc_gravedad').value;
+            const descripcion = document.getElementById('inc_descripcion').value.trim().toUpperCase();
+
+            try {
+                const res = await fetch('/api/operador/registrar_incidente', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ placa: placa, gravedad: gravedad, descripcion_incidente: descripcion })
+                });
+                const data = await res.json();
+
+                if (res.ok && data.status === 'success') {
+                    // ALERTAS TRADUCIDAS A CUADROS FLOTANTES MODERNOS
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Guardado!',
+                        text: 'Incidente registrado correctamente.',
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    document.getElementById('formIncidentes').reset();
+                    document.getElementById('charCount').textContent = "0 / 500";
+                    cargarIncidentesOperador();
+                } else {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Operación denegada',
+                        text: data.message || 'Error al procesar la solicitud.'
+                    });
+                }
+            } catch (err) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error Crítico',
+                    text: 'No se pudo conectar con el servidor.'
+                });
+            }
+        }
+
+        async function cargarIncidentesOperador() {
+            const placa = document.getElementById('filtroPlaca').value.trim().toUpperCase();
+            const estado = document.getElementById('filtroEstado').value;
+            const tbody = document.getElementById('tabla-incidentes-operador');
+
+            try {
+                const url = `/api/operador/obtener_incidentes?placa=${encodeURIComponent(placa)}&estado=${encodeURIComponent(estado)}`;
+                const res = await fetch(url);
+                if (!res.ok) throw new Error("Error en la petición");
+                
+                const data = await res.json();
+
+                if (data.status !== 'success' || !data.incidentes || data.incidentes.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="6" class="text-muted py-4"><i class="bi bi-info-circle me-1"></i> Sin incidentes registrados bajo estos filtros.</td></tr>`;
+                    return;
+                }
+
+                let html = '';
+                data.incidentes.forEach(i => {
+                    const placaTexto = i.placa ? i.placa.toString().toUpperCase() : 'SIN PLACA';
+                    const gravedadTexto = i.gravedad ? i.gravedad.toString().trim() : 'leve';
+                    const estadoTexto = i.estado ? i.estado.toString().trim() : 'Pendiente';
+                    const descripcionTexto = i.descripcion_incidente ? i.descripcion_incidente.toString() : '';
+                    
+                    const fechaIncidenteTexto = i.fecha_incidente ? i.fecha_incidente.toString() : 'No disponible';
+                    const fechaRevisionTexto = i.fecha_revisionincidente ? i.fecha_revisionincidente.toString() : '--';
+
+                    const gravLower = gravedadTexto.toLowerCase();
+                    const estLower = estadoTexto.toLowerCase();
+
+                    let badgeGravedad = 'bg-success';
+                    if (gravLower === 'critica' || gravLower === 'crítica') {
+                        badgeGravedad = 'bg-dark text-white';
+                    } else if (gravLower === 'moderada') {
+                        badgeGravedad = 'bg-warning text-dark';
+                    }
+
+                    let badgeEstado = 'bg-danger-subtle text-danger border border-danger-subtle';
+                    if (estLower === 'revisado') {
+                        badgeEstado = 'bg-success-subtle text-success border border-success-subtle';
+                    }
+
+                    html += `
+                        <tr>
+                            <td><strong class="font-monospace p-1 rounded bg-light text-primary border">${placaTexto}</strong></td>
+                            <td><span class="badge ${badgeGravedad} text-uppercase px-2.5 py-1">${gravedadTexto.toUpperCase()}</span></td>
+                            <td class="text-muted font-monospace">${fechaIncidenteTexto}</td>
+                            <td class="text-muted font-monospace fw-bold">${fechaRevisionTexto}</td>
+                            <td><span class="badge ${badgeEstado} px-2.5 py-1.5 rounded-pill fw-bold">${estadoTexto}</span></td>
+                            <td class="text-start bg-light text-dark px-3 font-monospace" style="white-space: pre-line; max-width: 300px; word-wrap: break-word;">${descripcionTexto}</td>
+                        </tr>`;
+                });
+                tbody.innerHTML = html;
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="6" class="text-danger py-3 fw-bold">Error de sincronización con la Base de Datos.</td></tr>`;
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel del Operador - EJARAD TIC</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
+    <style>
+        body { background-color: #f4f6f9; font-family: 'Segoe UI', sans-serif; }
+        .navbar-custom { background-color: #0f172a; color: white; }
+        .card-custom { border: none; border-radius: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .btn-action { padding: 4px 8px; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+    <nav class="navbar navbar-custom p-3 mb-4">
+        <div class="container-fluid d-flex justify-content-between align-items-center">
+            <span class="navbar-brand mb-0 h1 text-white fw-bold">🚗 EJARAD TIC - Módulo Operativo de Accesos</span>
+            <div class="d-flex align-items-center gap-3">
+                <span class="badge bg-secondary p-2"><i class="bi bi-person-badge me-1"></i> OPERADOR</span>
+                <a href="/logout" class="btn btn-outline-danger btn-sm"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4">
+        
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+                <a href="/inventario_operador" class="btn btn-dark w-100 p-3 card-custom d-flex align-items-center justify-content-between text-decoration-none text-white">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-car-front-fill fs-3 text-info"></i>
+                        <div class="text-start">
+                            <span class="fw-bold d-block">Inventario de Vehículos</span>
+                            <span class="text-muted small">Ver y editar unidades</span>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+            <div class="col-12 col-md-4">
+                <a href="/bitacora_dias" class="btn btn-dark w-100 p-3 card-custom d-flex align-items-center justify-content-between text-decoration-none text-white">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-calendar3 fs-3 text-warning"></i>
+                        <div class="text-start">
+                            <span class="fw-bold d-block">Bitácora de Accesos</span>
+                            <span class="text-muted small">Consultar ingresos por día</span>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+            <div class="col-12 col-md-4">
+                <a href="/contingencia" class="btn btn-dark w-100 p-3 card-custom d-flex align-items-center justify-content-between text-decoration-none text-white">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-journal-text fs-3 text-danger"></i>
+                        <div class="text-start">
+                            <span class="fw-bold d-block">Fecha del Registro(Contingencia)</span>
+                            <span class="text-muted small">Transcripción manual de accesos</span>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+            <div class="col-12 col-md-4">
+                <a href="/lista_negra" class="btn btn-dark w-100 p-3 card-custom d-flex align-items-center justify-content-between text-decoration-none text-white">
+                    <div class="d-flex align-items-center gap-3">
+                        <i class="bi bi-shield-x fs-3 text-danger"></i>
+                        <div class="text-start">
+                            <span class="fw-bold d-block">Lista Negra</span>
+                            <span class="text-muted small">Vehículos restringidos</span>
+                        </div>
+                    </div>
+                    <i class="bi bi-chevron-right text-muted"></i>
+                </a>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-lg-7">
+                <div class="card card-custom p-4 text-center h-100 bg-white">
+                    <h5 class="text-start mb-3 text-secondary fw-bold">
+                        <i class="bi bi-camera-video-fill me-2 text-primary"></i>MONITOR DE VIDEO EN TIEMPO REAL
+                    </h5>
+                    <div class="camera-placeholder mx-auto d-flex align-items-center justify-content-center position-relative overflow-hidden" style="max-width: 640px; border-radius: 12px; background-color: #0f172a; min-height: 360px;">
+                        <img src="/video_feed" class="w-100 h-100 object-fit-cover" alt="Video Feed Local" onerror="this.style.display='none'; document.getElementById('cam-error').classList.remove('d-none');">
+                        <div id="cam-error" class="position-absolute d-none text-white p-3">
+                            <i class="bi bi-camera-video-off fs-1 text-danger mb-2 d-block"></i>
+                            <span class="fw-semibold">Cámara fuera de línea o canal ocupado</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 d-flex justify-content-center gap-2">
+                        <span class="badge bg-success px-3 py-2"><i class="bi bi-circle-fill me-1"></i> TRANSMITIENDO</span>
+                        <span class="badge bg-dark px-3 py-2 text-secondary"><i class="bi bi-shield-check me-1"></i> PROTEGIDO</span>
+                    </div>
+                </div>
+            </div>
+
+
+            
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-light py-3">
+                    <h5 class="mb-0 text-primary small text-uppercase fw-bold">
+
+                        <i class="bi bi-camera-fill me-1"></i> Contingencia (Cámara Caída / Entrada Manual)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted small mb-3"> 
+                        Si la cámara principal LPR falla, elige una opción para capturar o cargar la placa del vehículo:
+                    </p>
+
+                     <form id="form-contingencia-ocr" enctype="multipart/form-data">
+                        <input type="file" id="foto_placa" name="foto_placa" accept="image/*" class="d-none" required>
+                         <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <button type="button" id="btn-disparar-camara" class="btn btn-outline-primary w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2">
+                                     <i class="bi bi-camera fs-3"></i>
+                                     <span class="fw-bold small">Tomar Foto</span>
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button type="button" id="btn-abrir-galeria" class="btn btn-outline-secondary w-100 py-3 d-flex flex-column align-items-center justify-content-center gap-2">
+                                        <i class="bi bi-images fs-3"></i>
+                                        <span class="fw-bold small">Subir Archivo</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="indicador-archivo" class="alert alert-light text-center py-2 border mb-3 small text-muted">
+                                <i class="bi bi-paperclip me-1"></i> Ninguna imagen capturada o seleccionada.
+                            </div>
+                            <button type="submit" id="btn-enviar-ocr" class="btn btn-primary w-100 py-2 fw-bold" disabled>
+                                <i class="bi bi-cpu me-1"></i> Procesar OCR
+                            </button>
+                         </form>
+                        </div>
+                    </div>
+            
+        
+            </div>
+            <div class="col-12 col-lg-5">
+                <div class="card card-custom p-4 h-100 bg-white">
+                    <h5 class="mb-3 text-secondary fw-bold">
+                        <i class="bi bi-cpu-fill me-2 text-primary"></i>ÚLTIMA LECTURA PROCESADA MEDIANTE ACCIONES DE CONTINGENCIA
+                    </h5>
+                    <div class="p-3 mb-3 border border-secondary border-opacity-25 rounded bg-light">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small fw-semibold">Matrícula Detectada</span>
+                            <span id="ia-badge-movimiento" class="badge bg-secondary">Esperando...</span>
+                        </div>
+                        <div id="ia-placa" class="display-5 fw-bold text-dark text-center py-2 border rounded bg-white shadow-sm font-monospace" style="letter-spacing: 2px;">
+                            ------
+                        </div>
+                    </div>
+                    <div class="row g-2 small">
+                        <div class="col-6">
+                            <div class="p-2 border rounded bg-light">
+                                <span class="text-muted d-block" style="font-size: 11px;">Propietario</span>
+                                <strong id="ia-propietario" class="text-dark">---</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 border rounded bg-light">
+                                <span class="text-muted d-block" style="font-size: 11px;">ACCESO</span>
+                                <strong id="ia-dni" class="text-dark">---</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 border rounded bg-light">
+                                <span class="text-muted d-block" style="font-size: 11px;">Marca / Modelo</span>
+                                <strong id="ia-vehiculo" class="text-dark">---</strong>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="p-2 border rounded bg-light">
+                                <span class="text-muted d-block" style="font-size: 11px;">ESTADO</span>
+                                <strong id="ia-detalles" class="text-dark">---</strong>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="ia-alerta-mensaje" class="alert alert-info mt-3 py-2 px-3 small mb-0 d-flex align-items-center gap-2">
+                        <i class="bi bi-info-circle-fill fs-5"></i>
+                        <span>El sistema está listo. Muestre una placa válida frente a la cámara.</span>
+                    </div>
+                </div>
+            </div> 
+
+    </div>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const inputOculto = document.getElementById('foto_placa');
+    const btnCamara = document.getElementById('btn-disparar-camara');
+    const btnGaleria = document.getElementById('btn-abrir-galeria');
+    const indicador = document.getElementById('indicador-archivo');
+    const btnEnviar = document.getElementById('btn-enviar-ocr');
+    
+    // Almacén interno para el archivo final optimizado
+    let BLOB_OPTIMIZADO = null;
+
+    // 📸 ACCIÓN 1: Tomar Foto 
+    btnCamara.addEventListener('click', () => {
+        inputOculto.value = ""; 
+        BLOB_OPTIMIZADO = null;
+        inputOculto.setAttribute('capture', 'environment'); 
+        inputOculto.click(); 
+    });
+
+    // 📂 ACCIÓN 2: Subir Archivo desde Galería / PC
+    btnGaleria.addEventListener('click', () => {
+        inputOculto.value = "";
+        BLOB_OPTIMIZADO = null;
+        inputOculto.removeAttribute('capture');
+        inputOculto.click(); 
+    });
+
+    // 🔔 DETECTOR DE CARGA Y COMPRESOR EN TIEMPO REAL
+    inputOculto.addEventListener('change', function() {
+        if (this.files && this.files[0]) {
+            const archivoOriginal = this.files[0];
+            
+            // Feedback visual inmediato de que se está optimizando la captura
+            indicador.className = "alert alert-warning text-center py-2 border mb-3 small fw-bold";
+            indicador.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Optimizando imagen...`;
+
+            const lector = new FileReader();
+            lector.readAsDataURL(archivoOriginal);
+            lector.onload = function(evento) {
+                const img = new Image();
+                img.src = evento.target.result;
+                img.onload = function() {
+                    // Configuración de dimensiones óptimas para lectura OCR (Máximo 1280px de ancho/alto)
+                    const MAX_DIMENSION = 1280;
+                    let ancho = img.width;
+                    let alto = img.height;
+
+                    if (ancho > alto && ancho > MAX_DIMENSION) {
+                        alto *= MAX_DIMENSION / ancho;
+                        ancho = MAX_DIMENSION;
+                    } else if (alto > MAX_DIMENSION) {
+                        ancho *= MAX_DIMENSION / alto;
+                        alto = MAX_DIMENSION;
+                    }
+
+                    // Redibujado ligero en un lienzo virtual para liberar la memoria RAM
+                    const canvas = document.createElement('canvas');
+                    canvas.width = ancho;
+                    canvas.height = alto;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, ancho, alto);
+
+                    // Conversión a un formato JPG comprimido al 70% (Perfecto para la IA y ultra liviano)
+                    canvas.toBlob((blob) => {
+                        BLOB_OPTIMIZADO = blob;
+                        
+                        const pesoFinalMB = (blob.size / (1024 * 1024)).toFixed(2);
+                        console.log(`Imagen optimizada con éxito. Peso final: ${pesoFinalMB} MB`);
+
+                        indicador.className = "alert alert-success text-center py-2 border mb-3 small fw-bold text-success animate__animated animate__pulse";
+                        indicador.innerHTML = `<i class="bi bi-image-fill me-1"></i> Imagen lista para procesar`;
+                        
+                        btnEnviar.disabled = false;
+                    }, 'image/jpeg', 0.7);
+                };
+            };
+        } else {
+            indicador.className = "alert alert-light text-center py-2 border mb-3 small text-muted";
+            indicador.innerHTML = `<i class="bi bi-paperclip me-1"></i> Ninguna imagen capturada o seleccionada.`;
+            btnEnviar.disabled = true;
+        }
+    });
+
+    // 🚀 FORMULARIO DE CONTINGENCIA CON ENVÍO EN CAPAS OPTIMIZADAS
+    document.getElementById('form-contingencia-ocr').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btnProcesar = this.querySelector('button[type="submit"]');
+        btnProcesar.disabled = true;
+        btnProcesar.innerHTML = `<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Procesando...`;
+
+        const formData = new FormData();
+        
+        // Si tenemos un blob optimizado en memoria, enviamos ese. Si no (como en la PC), usa el archivo plano original.
+        if (BLOB_OPTIMIZADO) {
+            formData.append('foto_placa', BLOB_OPTIMIZADO, 'captura_contingencia.jpg');
+        } else {
+            formData.append('foto_placa', inputOculto.files[0]);
+        }
+
+        fetch('/api/procesar_placa_imagen', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(res => {
+            btnProcesar.disabled = false;
+            btnProcesar.innerHTML = `<i class="bi bi-cpu me-1"></i> Procesar OCR`;
+
+            if (res.status === "success") {
+                const datos = res.datos;
+
+                const txtPlaca = document.getElementById('ia-placa');
+                txtPlaca.innerText = datos.placa;
+
+                if (datos.origen === 'lista_negra_alerta') {
+                    txtPlaca.className = "display-4 fw-bold text-danger animate__animated animate__flash";
+                } else {
+                    txtPlaca.className = "display-4 fw-bold text-dark";
+                }
+
+                document.getElementById('ia-propietario').innerText = datos.propietario;
+                document.getElementById('ia-dni').innerText = datos.dni_propietario;
+                document.getElementById('ia-vehiculo').innerText = `${datos.marca} ${datos.modelo}`;
+                document.getElementById('ia-detalles').innerText = `${datos.tipo_vehiculo} / ${datos.color}`;
+
+                const badgeMov = document.getElementById('ia-badge-movimiento');
+                if (badgeMov) {
+                    badgeMov.innerText = datos.tipo_movimiento.toUpperCase();
+                    if (datos.tipo_movimiento === 'Entrada') {
+                        badgeMov.className = "badge bg-success";
+                    } else if (datos.tipo_movimiento === 'Salida') {
+                        badgeMov.className = "badge bg-danger";
+                    } else {
+                        badgeMov.className = "badge bg-dark text-white text-uppercase";
+                    }
+                }
+
+                const cajaMensaje = document.getElementById('ia-alerta-mensaje');
+                if (cajaMensaje) {
+                    if (datos.origen === 'lista_negra_alerta') {
+                        cajaMensaje.className = "alert mt-3 py-2 px-3 small mb-0 d-flex align-items-center gap-2 alert-danger fw-bold shadow-sm border-danger";
+                        cajaMensaje.innerHTML = `<i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i> <span>${datos.message}</span>`;
+                        alert(datos.message);
+                    } else {
+                        cajaMensaje.className = "alert mt-3 py-2 px-3 small mb-0 d-flex align-items-center gap-2 " + 
+                                               (datos.origen === 'manual_pendiente' ? 'alert-warning' : 'alert-success');
+                        cajaMensaje.innerHTML = `<i class="bi bi-check-circle-fill fs-5"></i> <span>${datos.message}</span>`;
+                        alert("✅ Éxito: La foto del vehículo ha sido procesada correctamente por el motor OCR de la IA.");
+                    }
+                }
+
+                BLOB_OPTIMIZADO = null;
+                this.reset(); 
+            } else {
+                alert("⚠️ Error: " + (res.message || "No se pudo procesar la imagen."));
+            }
+        })
+        .catch(error => {
+            btnProcesar.disabled = false;
+            btnProcesar.innerHTML = `<i class="bi bi-cpu me-1"></i> Procesar OCR`;
+            console.error("Error en contingencia manual:", error);
+            alert("❌ Error de red: No se pudo conectar con el servidor.");
+        });
+    });
+});
+
+
+
+// =========================================================================
+// CANAL DE EVENTOS EN TIEMPO REAL (SSE) - UNIFICADO Y CORREGIDO
+// =========================================================================
+document.addEventListener("DOMContentLoaded", () => {
+    // Asegurar una única conexión activa global con el stream del servidor
+    if (window.sourcePlacas) {
+        window.sourcePlacas.close();
+    }
+    
+    window.sourcePlacas = new EventSource('/api/stream_placas_detectadas');
+window.sourcePlacas.onmessage = function(event) {
+    try {
+        const datos = JSON.parse(event.data);
+        console.log("🚀 Nueva detección recibida en vivo:", datos);
+
+        // 1. Asegurar que los datos y la placa existan
+        if (!datos || !datos.placa) return;
+
+        // 🚨 FILTRO ANTIFANTASMAS: Si la placa tiene menos de 6 caracteres (como XXX-11), la ignoramos de golpe.
+        // Esto evita que falsos positivos limpien o saturen tu pantalla.
+        if (datos.placa.trim().length < 6) {
+            console.warn(`⚠️ Filtro de ráfaga: Lectura errónea descartada por longitud corta (${datos.placa})`);
+            return;
+        }
+
+        // ----------------=================================================
+        // PARTE 1: RELLENAR LOS DATOS FIJOS DEL PANEL LATERAL
+        // ----------------=================================================
+        const txtPlaca = document.getElementById('ia-placa');
+        if (txtPlaca) {
+            txtPlaca.innerText = datos.placa;
+            txtPlaca.className = (datos.tipo_movimiento === 'Bloqueado') 
+                ? "display-4 fw-bold text-danger animate__animated animate__flash" 
+                : "display-4 fw-bold text-dark";
+        }
+
+        if (document.getElementById('ia-propietario')) {
+            document.getElementById('ia-propietario').innerText = datos.vehiculo_oficial ? (datos.agencia || "Vehículo Oficial") : "Usuario No Registrado";
+        }
+        if (document.getElementById('ia-dni')) {
+            document.getElementById('ia-dni').innerText = datos.vehiculo_oficial ? "CON ACCESO" : "S/D";
+        }
+        if (document.getElementById('ia-vehiculo')) {
+            document.getElementById('ia-vehiculo').innerText = datos.detalles_vehiculo || "Datos de Inventario";
+        }
+        if (document.getElementById('ia-detalles')) {
+            document.getElementById('ia-detalles').innerText = datos.message || "Movimiento detectado";
+        }
+
+        const badgeMov = document.getElementById('ia-badge-movimiento');
+        if (badgeMov) {
+            badgeMov.innerText = (datos.tipo_movimiento || 'Entrada').toUpperCase();
+            if (datos.tipo_movimiento === 'Entrada') {
+                badgeMov.className = "badge bg-success";
+            } else if (datos.tipo_movimiento === 'Salida') {
+                badgeMov.className = "badge bg-danger";
+            } else {
+                badgeMov.className = "badge bg-dark";
+            }
+        }
+
+        const cajaMensaje = document.getElementById('ia-alerta-mensaje');
+        if (cajaMensaje) {
+            if (datos.tipo_movimiento === 'Bloqueado') {
+                cajaMensaje.className = "alert mt-3 py-2 px-3 small mb-0 d-flex align-items-center gap-2 alert-danger fw-bold shadow-sm border-danger";
+                cajaMensaje.innerHTML = `<i class="bi bi-exclamation-triangle-fill fs-5 text-danger"></i> <span>${datos.message}</span>`;
+            } else {
+                cajaMensaje.className = "alert mt-3 py-2 px-3 small mb-0 d-flex align-items-center gap-2 " + 
+                                     (datos.vehiculo_oficial === false ? 'alert-warning' : 'alert-success');
+                cajaMensaje.innerHTML = `<i class="bi bi-check-circle-fill fs-5"></i> <span>${datos.message || ''}</span>`;
+            }
+        }
+
+
+        // ----------------=================================================
+        // PARTE 2: INYECCIÓN DINÁMICA DE CUADROS FLOTANTES (TOASTS)
+        // ----------------=================================================
+        const cajaContenedora = document.getElementById('toast-container');
+        if (!cajaContenedora) {
+            console.warn("⚠️ No se encontró '#toast-container' en el HTML para renderizar el cuadro.");
+            return; 
+        }
+
+        // 💡 SOLUCIÓN CRÍTICA AL ID ÚNICO: Reemplaza cualquier símbolo, guion o espacio por vacío absoluto
+        // Esto garantiza que 'P3X786' genere un ID impecable 'toast-P3X786'
+        const idAlertaUnica = 'toast-' + datos.placa.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        
+        // Si el cuadro de esta placa ya está visible en pantalla, no lo duplicamos
+        if (document.getElementById(idAlertaUnica)) {
+            console.log(`ℹ️ La tarjeta para la placa ${datos.placa} ya está en pantalla. Evitando duplicado.`);
+            return;
+        }
+
+        let estructuraToast = "";
+
+        // 💡 FLEXIBILIDAD EN CASO A: Validamos true nativo, texto "true" o número 1
+        if (datos.vehiculo_oficial === true || datos.vehiculo_oficial === "true" || datos.vehiculo_oficial === 1) {
+            let esBloqueado = datos.tipo_movimiento === "Bloqueado";
+            let esSalida = datos.tipo_movimiento === "Salida";
+            
+            let claseEstilo = esBloqueado ? "bg-danger" : (esSalida ? "bg-danger" : "bg-success");
+            let colorBorde = esBloqueado ? "#dc3545" : (esSalida ? "#dc3545" : "#198754");
+            let icono = esBloqueado ? "bi-shield-lock-fill" : (esSalida ? "bi-box-arrow-left" : "bi-box-arrow-in-right");
+            let textoAccion = esBloqueado ? "🚨 ACCESO BLOQUEADO" : (esSalida ? "📤 SALIDA REGISTRADA" : "📥 ENTRADA REGISTRADA");
+
+            estructuraToast = `
+                <div id="${idAlertaUnica}" class="toast show bg-white shadow-lg animate__animated animate__fadeInRight" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 320px; border-radius: 12px; overflow: hidden; margin-bottom: 12px; border-left: 5px solid ${colorBorde}; opacity: 1 !important;">
+                    <div class="toast-header ${claseEstilo} text-white px-3 py-2">
+                        <i class="bi ${icono} me-2 fs-5"></i>
+                        <strong class="me-auto font-monospace fw-bold">${esBloqueado ? '[🚨 LISTA NEGRA]' : '[👁️ OFICIAL EN VIVO]'}</strong>
+                        <small class="text-white-50">Ahora</small>
+                        <button type="button" class="btn-close btn-close-white" onclick="removerToastDePantalla('${idAlertaUnica}')" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body p-3 text-center">
+                        <div class="mb-2">
+                            <span class="fs-1 fw-bold font-monospace px-4 py-1 border border-dark border-opacity-10 rounded bg-light text-dark shadow-sm d-inline-block" style="letter-spacing: 2px;">
+                                ${datos.placa}
+                            </span>
+                        </div>
+                        <div class="mb-1 fw-bold text-secondary text-uppercase small">${datos.agencia || "CONTROL DE ACCESOS"}</div>
+                        <div class="text-muted small mb-2">${datos.detalles_vehiculo || "Vehículo verificado en Base de Datos"}</div>
+                        <div>
+                            <span class="fs-5 fw-bold ${esBloqueado || esSalida ? 'text-danger' : 'text-success'}">
+                                ${textoAccion}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            cajaContenedora.insertAdjacentHTML('afterbegin', estructuraToast);
+            
+            if (esBloqueado) {
+                playSonidoNotificacion(150, 'sawtooth', 0.5);
+            } else {
+                playSonidoNotificacion(600, 'sine', 0.15);
+            }
+
+            // Desvanecer el cuadro automáticamente tras 6 segundos
+            setTimeout(() => removerToastDePantalla(idAlertaUnica), 6000);
+        } 
+        
+        // CASO B: VEHÍCULO NUEVO / NO ENCONTRADO
+        else {
+            estructuraToast = `
+                <div id="${idAlertaUnica}" class="toast show bg-white shadow-lg animate__animated animate__shakeX" role="alert" aria-live="assertive" aria-atomic="true" style="min-width: 340px; border-radius: 12px; overflow: hidden; margin-bottom: 12px; border-left: 5px solid #0d6efd; opacity: 1 !important;" data-bs-autohide="false">
+                    <div class="toast-header bg-primary text-white px-3 py-2">
+                        <i class="bi bi-question-circle-fill me-2 fs-5"></i>
+                        <strong class="me-auto font-monospace fw-bold">[❓ VEHÍCULO NUEVO]</strong>
+                        <span class="badge bg-light text-primary fw-bold">INTERACTIVO</span>
+                    </div>
+                    <div class="toast-body p-3 text-center">
+                        <div class="mb-2">
+                            <span class="fs-1 fw-bold font-monospace px-4 py-1 border border-primary border-opacity-25 rounded bg-light text-primary d-inline-block" style="letter-spacing: 2px;">
+                                ${datos.placa}
+                            </span>
+                        </div>
+                        <p class="small text-muted mb-3 fw-semibold">No figura en la Base de Datos.<br>¿Desea registrar su entrada en la bitácora?</p>
+                        
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button class="btn btn-success btn-sm px-3 fw-bold shadow-sm" onclick="registrarVehiculoNuevo('${datos.placa}', '${idAlertaUnica}')">
+                                <i class="bi bi-check-lg"></i> Sí, registrar
+                            </button>
+                            <button class="btn btn-secondary btn-sm px-3 fw-bold shadow-sm" onclick="removerToastDePantalla('${idAlertaUnica}')">
+                                <i class="bi bi-x-lg"></i> No, ignorar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            cajaContenedora.insertAdjacentHTML('afterbegin', estructuraToast);
+            playSonidoNotificacion(320, 'triangle', 0.35);
+        }
+
+    } catch (error) {
+        console.error("❌ Error procesando el stream SSE en el frontend:", error);
+    }
+};
+
+
+
+
+window.sourcePlacas.onerror = function(error) {
+        console.warn("🔄 Canal SSE interrumpido. Limpiando conexión para evitar pérdida de ráfagas...");
+        
+        // Cerramos el canal roto de forma segura
+        window.sourcePlacas.close();
+        
+        // 💡 Esperamos exactamente 2 segundos antes de levantar un canal limpio y nuevo
+        setTimeout(() => {
+            console.log("🚀 Reconectando canal de placas de forma segura...");
+            window.sourcePlacas = new EventSource('/api/stream_placas_detectadas');
+            
+            // Reasignamos la función de pintado al nuevo canal
+            window.sourcePlacas.onmessage = window.sourcePlacasOnMessageRef; 
+        }, 2000);
+    };
+
+    // Dejamos una referencia global de tu función de Toasts para que la reconexión la recuerde
+    window.sourcePlacasOnMessageRef = window.sourcePlacas.onmessage;
+});
+
+// =========================================================================
+// FUNCIONES AUXILIARES DE CONTROL Y ANIMACIÓN CORREGIDAS
+// =========================================================================
+
+/**
+ * Elimina físicamente el Toast del HTML aplicando un desvanecimiento suave hacia la derecha
+ */
+function removerToastDePantalla(id) {
+    const elemento = document.getElementById(id);
+    if (elemento) {
+        elemento.style.transition = "all 0.35s ease";
+        elemento.style.opacity = "0";
+        elemento.style.transform = "translateX(60px)";
+        setTimeout(() => {
+            elemento.remove();
+            console.log(`Tarjeta ${id} removida de la interfaz.`);
+        }, 350); 
+    }
+}
+
+/**
+ * Función definitiva para el botón "Sí, registrar" -> Inserta en MySQL mediante tu endpoint correcto
+ */
+function registrarVehiculoNuevo(placa, elementoId) {
+    console.log(`📡 Enviando orden para registrar la placa: ${placa}`);
+
+    fetch('/registrar_vehiculo_rapido', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ placa: placa })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert(`🎉 Éxito: La placa ${placa} ha sido dada de alta en el inventario y registrada en la bitácora.`);
+            // Cerramos el Toast con la animación limpia
+            removerToastDePantalla(elementoId);
+        } else {
+            alert(`❌ Error al registrar: ${data.message}`);
+        }
+    })
+    .catch(error => {
+        console.error('Error en la petición Fetch:', error);
+        alert('❌ No se pudo conectar con el servidor.');
+    });
+}
+
+/**
+ * Genera un pitido electrónico nativo usando la Web Audio API del navegador
+ */
+function playSonidoNotificacion(frecuencia, tipoOnda, duracionSegundos) {
+    try {
+        const contextoAudio = new (window.AudioContext || window.webkitAudioContext)();
+        const oscilador = contextoAudio.createOscillator();
+        const controlGanancia = contextoAudio.createGain();
+        
+        oscilador.type = tipoOnda;
+        oscilador.frequency.setValueAtTime(frecuencia, contextoAudio.currentTime);
+        controlGanancia.gain.setValueAtTime(0.06, contextoAudio.currentTime); // Volumen sutil (6%)
+        
+        oscilador.connect(controlGanancia);
+        controlGanancia.connect(contextoAudio.destination);
+        
+        oscilador.start();
+        oscilador.stop(contextoAudio.currentTime + duracionSegundos);
+    } catch (e) {
+        // Bloqueado por políticas del navegador hasta interacción inicial
+    }
+};
+
+
+
+
+</script>
+</body>
+<div id="toast-container" class="toast-container position-fixed end-0 p-3" style="z-index: 9999; top: 20px;">
+</div>
+</html>

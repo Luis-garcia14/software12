@@ -1,0 +1,152 @@
+{% extends 'panel_admin.html' %}
+
+{% block contenido %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+    .card-custom { box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: none; border-radius: 12px; }
+    .tabla-card { border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.04); }
+    .form-label { font-size: 13px; font-weight: 600; }
+</style>
+
+<div class="container-fluid px-3 animate__animated animate__fadeIn">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark m-0">
+            <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Métricas de Productividad
+        </h3>
+        <span class="badge bg-dark px-3 py-2 text-uppercase font-monospace">Panel Analítico</span>
+    </div>
+
+    <div class="card p-4 bg-white mt-4 tabla-card">
+        <h5 class="fw-bold mb-3 text-dark">📊 Monitoreo Analítico de Productividad Operativa</h5>
+        
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <label class="form-label text-secondary small">Fecha Inicio</label>
+                <input type="date" id="reporte_fecha_inicio" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-secondary small">Fecha Fin</label>
+                <input type="date" id="reporte_fecha_fin" class="form-control">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label text-secondary small">Turno Laboral</label>
+                <select id="reporte_turno" class="form-select">
+                    <option value="todos">Todos los Turnos (24 hrs)</option>
+                    <option value="madrugada">🌌 Madrugada (12:00 AM - 06:00 AM)</option>
+                    <option value="manana">☀️ Mañana (06:00 AM - 12:00 PM)</option>
+                    <option value="tarde">🌆 Tarde (12:00 PM - 06:00 PM)</option>
+                    <option value="noche">🌙 Noche (06:00 PM - 12:00 AM)</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-primary w-100 fw-bold" onclick="cargarReporteProductividad()">
+                    <i class="bi bi-search me-1"></i> Generar Reporte
+                </button>
+            </div>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 15%;">ID Operador</th>
+                        <th style="width: 45%;">Nombre del Vigilante</th>
+                        <th style="width: 20%;">Rol</th>
+                        <th style="width: 20%;" class="text-center">Vehículos Atendidos</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla_reporte_personal">
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="bi bi-funnel-fill fs-3 text-secondary d-block mb-2"></i>
+                            Seleccione los filtros para generar el análisis métrico de rendimiento.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<script>
+    // Asignar por defecto la fecha actual del sistema en los inputs de filtros al entrar
+    document.addEventListener("DOMContentLoaded", () => {
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('reporte_fecha_inicio').value = hoy;
+        document.getElementById('reporte_fecha_fin').value = hoy;
+    });
+
+    // Lógica asíncrona de obtención e inyección de métricas
+    function cargarReporteProductividad() {
+        const fechaInicio = document.getElementById('reporte_fecha_inicio').value;
+        const fechaFin = document.getElementById('reporte_fecha_fin').value;
+        const turno = document.getElementById('reporte_turno').value;
+
+        if (!fechaInicio || !fechaFin) {
+            // REEMPLAZO DE ALERT() NATIVO POR LLAMADA INTERACTIVA CON SWAL.FIRE()
+            Swal.fire({
+                icon: 'warning',
+                title: 'Campos incompletos',
+                text: 'Por favor, seleccione un rango de fechas válido.',
+                confirmButtonColor: '#0d6efd'
+            });
+            return;
+        }
+
+        const tbody = document.getElementById('tabla_reporte_personal');
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="4" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                    ⏳ Procesando análisis métrico en el servidor...
+                </td>
+            </tr>
+        `;
+
+        fetch(`/api/reporte_productividad?fecha_inicio=${fechaInicio}&fecha_fin=${fechaFin}&turno=${turno}`)
+            .then(response => response.json())
+            .then(res => {
+                if (res.status === "success") {
+                    tbody.innerHTML = "";
+                    if (res.data.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="bi bi-info-circle d-block fs-4 mb-1"></i>
+                                    No hay datos de productividad registrados para este filtro.
+                                </td>
+                            </tr>`;
+                        return;
+                    }
+                    
+                    res.data.forEach(op => {
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><span class="badge bg-secondary font-monospace">#${op.id}</span></td>
+                                <td class="fw-bold text-dark">${op.nombre}</td>
+                                <td><span class="badge bg-light text-dark border text-uppercase" style="font-size: 11px;">${op.rol}</span></td>
+                                <td class="text-center fw-bold text-primary fs-5">${op.total_atendidos}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">❌ Error: ${res.message}</td></tr>`;
+                }
+            })
+            .catch(err => {
+                console.error("Error de Red:", err);
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-danger py-4">❌ Error de conexión al servidor analítico.</td></tr>`;
+            });
+    }
+</script>
+{% endblock %}

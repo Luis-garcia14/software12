@@ -1,0 +1,184 @@
+{% extends 'panel_admin.html' %}
+
+{% block contenido %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+
+<div class="container-fluid py-4">
+
+    <div class="card card-custom border-danger mb-5 shadow-sm" style="border-left: 5px solid #dc3545 !important;">
+        <div class="card-header bg-danger-subtle text-danger fw-bold d-flex align-items-center justify-content-between py-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="bi bi-exclamation-octagon-fill fs-5"></i>
+                <span>INCIDENTES POR REVISAR (CONTROL OPERATIVO PENDIENTE)</span>
+            </div>
+            <button type="button" class="btn btn-outline-danger btn-sm d-flex align-items-center gap-1 px-3" onclick="location.reload()" title="Actualizar página">
+                <i class="bi bi-arrow-clockwise fs-6"></i> Actualizar
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle m-0 text-center">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 15%;">Placa / Vehículo</th>
+                            <th style="width: 12%;">Gravedad</th>
+                            <th style="width: 18%;">Fecha Registro</th> <th class="text-start" style="width: 45%;">Detalle del Incidente</th>
+                            <th style="width: 10%;">Revisado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if pendientes %}
+                            {% for inc in pendientes %}
+                            <tr id="fila-inc-{{ inc.id }}" class="table-danger" style="--bs-table-bg: #f8d7da; color: #842029;">
+                                <td>
+                                    <span class="badge bg-danger px-3 py-2 fs-6 font-monospace shadow-sm text-uppercase">{{ inc.placa }}</span>
+                                </td>
+                                <td>
+                                    {% if inc.gravedad == 'critica' %}
+                                        <span class="badge bg-dark text-white w-100 py-2 text-uppercase">🔴 Crítica</span>
+                                    {% elif inc.gravedad == 'moderada' %}
+                                        <span class="badge bg-warning text-dark w-100 py-2 text-uppercase">🟡 Moderada</span>
+                                    {% else %}
+                                        <span class="badge bg-success text-white w-100 py-2 text-uppercase">🟢 Leve</span>
+                                    {% endif %}
+                                </td>
+                                <td class="font-monospace fw-semibold" style="font-size: 13px;">
+                                    {{ inc.fecha_incidente }}
+                                </td>
+                                <td class="text-start small fw-semibold text-uppercase font-monospace" style="white-space: pre-line; word-break: break-word;">{{ inc.descripcion_incidente }}</td>
+                                <td>
+                                    <button onclick="marcarRevisado('{{ inc.id }}')" class="btn btn-success btn-sm rounded-circle p-2 shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Confirmar Revisión">
+                                        <i class="bi bi-check-lg fs-5"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted bg-light">
+                                    <i class="bi bi-check-circle-fill text-success me-2"></i>¡Todo al día! No hay incidentes pendientes por revisar.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="card card-custom border-secondary shadow-sm" style="border-left: 5px solid #6c757d !important;">
+        <div class="card-header bg-light text-secondary fw-bold py-3 d-flex align-items-center gap-2">
+            <i class="bi bi-archive-fill fs-5"></i>
+            <span>HISTORIAL DE INCIDENTES PROCESADOS</span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped align-middle m-0 text-center">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 15%;">Placa / Vehículo</th>
+                            <th style="width: 12%;">Gravedad</th>
+                            <th style="width: 18%;">Fecha Reporte</th> <th style="width: 18%;">Fecha Revisión Admin</th> <th class="text-start" style="width: 37%;">Detalle del Incidente</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if revisados %}
+                            {% for inc in revisados %}
+                            <tr>
+                                <td>
+                                    <span class="badge bg-secondary px-3 py-2 fs-6 font-monospace text-uppercase">{{ inc.placa }}</span>
+                                </td>
+                                <td>
+                                    {% if inc.gravedad == 'critica' %}
+                                        <span class="badge bg-outline-dark border text-dark w-100 py-1 text-uppercase small fw-bold">Crítica</span>
+                                    {% elif inc.gravedad == 'moderada' %}
+                                        <span class="badge bg-outline-warning border text-dark w-100 py-1 text-uppercase small fw-bold">Moderada</span>
+                                    {% else %}
+                                        <span class="badge bg-outline-success border text-dark w-100 py-1 text-uppercase small fw-bold">Leve</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-muted font-monospace" style="font-size: 13px;">
+                                    {{ inc.fecha_incidente }}
+                                </td>
+                                <td class="text-success font-monospace fw-bold" style="font-size: 13px;">
+                                    {{ inc.fecha_revisionincidente }}
+                                </td>
+                                <td class="text-start text-muted small text-uppercase font-monospace" style="white-space: pre-line; word-break: break-word;">{{ inc.descripcion_incidente }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="5" class="text-center py-4 text-muted">
+                                    <i class="bi bi-folder-x me-2"></i>El historial está vacío. Aún no se han completado revisiones.
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    function marcarRevisado(idInc) {
+        if (!idInc) return;
+        
+        // REEMPLAZO DE CONFIRM() NATIVO POR CUADRO DE DIÁLOGO INTERACTIVO SWAL.FIRE()
+        Swal.fire({
+            title: '¿Confirmar Revisión?',
+            text: "¿Confirmas que has verificado y solucionado este incidente reportado?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, resolver',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Envío al endpoint RESTful PUT del administrador
+                fetch(`/api/admin/revisar_incidente/${idInc}`, { method: 'PUT' })
+                .then(response => {
+                    if (!response.ok) throw new Error('Respuesta de red no conforme.');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.status === 'success') {
+                        // Efecto visual de desvanecimiento controlado
+                        const fila = document.getElementById(`fila-inc-${idInc}`);
+                        if (fila) {
+                            fila.style.transition = "all 0.3s ease";
+                            fila.style.opacity = "0";
+                            fila.style.transform = "translateX(20px)";
+                        }
+                        // Recarga para reordenar la información desde el servidor de base de datos
+                        setTimeout(() => {
+                            location.reload();
+                        }, 300);
+                    } else {
+                        // REEMPLAZO DE ALERT NATIVO EN CASO DE ERROR RETORNADO POR BACKEND
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error en el procesamiento',
+                            text: data.message,
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                })
+                .catch(err => {
+                    console.error("Error detectado en fetch:", err);
+                    // REEMPLAZO DE ALERT NATIVO EN CASO DE ERROR DE CONEXIÓN
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de conexión',
+                        text: 'No se pudo comunicar con el servidor de Base de Datos.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                });
+            }
+        });
+    }
+</script>
+{% endblock %}

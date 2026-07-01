@@ -1,0 +1,163 @@
+{% extends 'panel_admin.html' %}
+
+{% block contenido %}
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+    .card-custom { box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: none; border-radius: 12px; }
+    .form-label { font-size: 13px; font-weight: 600; color: #475569; }
+</style>
+
+<div class="container-fluid px-3 animate__animated animate__fadeIn">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark m-0">
+            <i class="bi bi-person-lines-fill text-success me-2"></i>Historial de los Vigilantes
+        </h3>
+        <span class="badge bg-dark px-3 py-2 text-uppercase font-monospace">Seguimiento de Personal</span>
+    </div>
+
+    <div class="card p-4 bg-white card-custom">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="fw-bold text-dark m-0">🔍 Control de Vehículos Registrados por Personal</h5>
+            <span class="badge bg-success fs-6 p-2 shadow-sm" id="auditoria_total_contador">0 Registros Encontrados</span>
+        </div>
+        <p class="text-muted small">Busque un vigilante específico para desplegar de forma cronológica el historial exacto de los vehículos que ingresó y liberó.</p>
+        
+        <div class="row g-3 mb-2">
+            <div class="col-md-3">
+                <label class="form-label text-secondary small fw-bold">Digite Vigilante (Nombre o ID)</label>
+                <input type="text" id="auditoria_operador" class="form-control border-success text-uppercase" placeholder="Ej: Juan o ID: 2">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-secondary small">Fecha Inicio</label>
+                <input type="date" id="auditoria_fecha_inicio" class="form-control">
+            </div>
+            <div class="col-md-2">
+                <label class="form-label text-secondary small">Fecha Fin</label>
+                <input type="date" id="auditoria_fecha_fin" class="form-control">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label text-secondary small">Turno Laboral</label>
+                <select id="auditoria_turno" class="form-select">
+                    <option value="todos">Todos los Turnos (24 hrs)</option>
+                    <option value="madrugada">🌌 Madrugada (12:00 AM - 06:00 AM)</option>
+                    <option value="manana">☀️ Mañana (06:00 AM - 12:00 PM)</option>
+                    <option value="tarde">🌆 Tarde (12:00 PM - 06:00 PM)</option>
+                    <option value="noche">🌙 Noche (06:00 PM - 12:00 AM)</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button class="btn btn-success w-100 fw-bold shadow-sm" onclick="ejecutarAuditoriaOperador()">
+                    <i class="bi bi-search me-1"></i> Buscar Historial
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="card p-4 bg-white mt-4 card-custom">
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle border">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 15%;">Placa</th>
+                        <th style="width: 35%;">Agencia / Propietario</th>
+                        <th style="width: 20%;">🕒 Fecha/Hora Ingreso</th>
+                        <th style="width: 20%;">🕒 Fecha/Hora Salida</th>
+                        <th style="width: 10%;">Responsable</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla_auditoria_resultados">
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="bi bi-info-circle fs-4 d-block mb-2"></i>
+                            Ingrese los datos del vigilante y presione "Buscar Historial" para iniciar la búsqueda.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        const hoy = new Date().toISOString().split('T')[0];
+        document.getElementById('auditoria_fecha_inicio').value = hoy;
+        document.getElementById('auditoria_fecha_fin').value = hoy;
+    });
+
+    function ejecutarAuditoriaOperador() {
+        const operador = document.getElementById('auditoria_operador').value.trim();
+        const f_inicio = document.getElementById('auditoria_fecha_inicio').value;
+        const f_fin = document.getElementById('auditoria_fecha_fin').value;
+        const turno = document.getElementById('auditoria_turno').value;
+
+        if (!operador) {
+            alert("⚠️ Por favor, ingrese el nombre o ID del vigilante a buscar.");
+            return;
+        }
+        if (!f_inicio || !f_fin) {
+            alert("⚠️ Seleccione un rango de fechas válido.");
+            return;
+        }
+
+        const tbody = document.getElementById('tabla_auditoria_resultados');
+        const contador = document.getElementById('auditoria_total_contador');
+        
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="5" class="text-center py-4">
+                    <div class="spinner-border spinner-border-sm text-success me-2" role="status"></div>
+                    Buscando registros en la base de datos...
+                </td>
+            </tr>`;
+
+        fetch(`/api/auditoria_detallada_operador?operador=${operador}&fecha_inicio=${f_inicio}&fecha_fin=${f_fin}&turno=${turno}`)
+            .then(response => response.json())
+            .then(res => {
+                if (res.status === "success") {
+                    tbody.innerHTML = "";
+                    contador.textContent = `${res.data.length} Registros Encontrados`;
+
+                    if (res.data.length === 0) {
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-4">
+                                    No se encontraron vehículos registrados por este vigilante en las fechas y turnos seleccionados.
+                                </td>
+                            </tr>`;
+                        return;
+                    }
+
+                    res.data.forEach(item => {
+                        const salidaTexto = item.fecha_salida === '---' 
+                            ? `<span class="badge bg-warning text-dark font-monospace">Aún Adentro</span>`
+                            : `<span class="font-monospace text-secondary">${item.fecha_salida}</span>`;
+
+                        tbody.innerHTML += `
+                            <tr>
+                                <td><span class="badge bg-dark px-2 py-2 font-monospace fs-6">${item.placa}</span></td>
+                                <td class="text-uppercase fw-semibold text-secondary small">${item.propietario || '---'}</td>
+                                <td class="font-monospace text-success fw-bold">${item.fecha_ingreso}</td>
+                                <td>${salidaTexto}</td>
+                                <td class="text-uppercase small fw-bold text-dark"><i class="bi bi-person-fill text-success me-1"></i>${item.nombre_operador}</td>
+                            </tr>
+                        `;
+                    });
+                } else {
+                    contador.textContent = "0 Registros Encontrados";
+                    tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">❌ Error: ${res.message}</td></tr>`;
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center text-danger py-4">❌ Error de conexión con el servidor.</td></tr>`;
+            });
+    }
+</script>
+{% endblock %}

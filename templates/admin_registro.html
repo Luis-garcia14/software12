@@ -1,0 +1,212 @@
+{% extends 'panel_admin.html' %}
+
+{% block contenido %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', sans-serif; }
+    .card-custom { box-shadow: 0 4px 15px rgba(0,0,0,0.05); border: none; border-radius: 12px; }
+    .form-label { font-size: 13px; color: #475569; }
+    .seccion-titulo { font-size: 14px; font-weight: 700; color: #1e293b; border-bottom: 2px solid #e2e8f0; padding-bottom: 4px; margin-bottom: 15px; }
+</style>
+
+<div class="container-fluid px-3 animate__animated animate__fadeIn">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark m-0">
+            <i class="bi bi-patch-plus-fill text-primary me-2"></i>Registrar Nuevo Vehículo
+        </h3>
+        <span class="badge bg-dark px-3 py-2 text-uppercase font-monospace">Modo Administrator</span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-8 col-lg-10 mx-auto">
+            <div class="card card-custom p-4 bg-white">
+                <div class="mb-3">
+                    <h5 class="fw-bold m-0 text-dark">Alta de Unidad Vehicular en el Inventario</h5>
+                    <p class="text-muted small">Ingrese los datos para registrar de forma permanente y autorizar el vehículo en el sistema global.</p>
+                </div>
+
+                <form id="formRegistroAdmin" onsubmit="guardarVehiculoNuevo(event)">
+                    
+                    <div class="seccion-titulo text-uppercase tracking-wider"><i class="bi bi-car-front-fill me-2"></i>Especificaciones de la Unidad</div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Número de Placa <span class="text-danger">*</span></label>
+                            <input type="text" 
+                                   id="reg_placa" 
+                                   class="form-control form-control-lg text-uppercase fw-bold font-monospace border-primary text-primary text-center" 
+                                   placeholder="AAA-123" 
+                                   maxlength="7" 
+                                   oninput="formatearPlacaMascara(this)"
+                                   required>
+                            <div class="form-text text-danger fw-semibold" style="font-size: 11px;">Formato: 3 caracteres - 3 caracteres [Ej: QAS-555]</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Tipo de Vehículo</label>
+                            <input type="text" id="reg_tipo" class="form-control text-uppercase" placeholder="Ej: CAMIONETA, AUTO, MOTO">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Color</label>
+                            <input type="text" id="reg_color" class="form-control text-uppercase" placeholder="Ej: BLANCO, NEGRO">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Marca</label>
+                            <input type="text" id="reg_marca" class="form-control text-uppercase" placeholder="Ej: TOYOTA, NISSAN">
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold">Modelo</label>
+                            <input type="text" id="reg_modelo" class="form-control text-uppercase" placeholder="Ej: HILUX, SENTRA">
+                        </div>
+                    </div>
+
+                    <div class="seccion-titulo text-uppercase tracking-wider text-primary"><i class="bi bi-building me-2"></i>Información Corporativa / Agencia</div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-7">
+                            <label class="form-label fw-bold">Agencia Propietaria <span class="text-danger">*</span></label>
+                            <input type="text" id="reg_agencia" class="form-control text-uppercase" placeholder="Ej: TRANSPORTES SAC, PARTICULAR" required>
+                        </div>
+                        <div class="col-md-5">
+                            <label class="form-label fw-bold">Teléfono de la Agencia</label>
+                            <input type="text" 
+                                   id="reg_tel_agencia" 
+                                   class="form-control font-monospace" 
+                                   placeholder="Ej: 987654321" 
+                                   maxlength="9" 
+                                   oninput="filtrarNumerosTelefonicos(this)">
+                            <div class="form-text text-muted" style="font-size: 11px;">Solo números (Máx. 9 dígitos).</div>
+                        </div>
+                    </div>
+
+                    <div class="seccion-titulo text-uppercase tracking-wider text-success"><i class="bi bi-person-badge-fill me-2"></i>Identificación del Conductor</div>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">DNI Conductor <span class="text-danger">*</span></label>
+                            <input type="text" id="reg_dni_conductor" class="form-control font-monospace fw-bold" placeholder="8 dígitos" maxlength="8" oninput="filtrarNumerosTelefonicos(this)" required>
+                            <div class="form-text text-muted" style="font-size: 11px;">Exactamente 8 dígitos numéricos.</div>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label fw-bold">Nombre Completo del Conductor <span class="text-danger">*</span></label>
+                            <input type="text" id="reg_nombre_conductor" class="form-control text-uppercase" placeholder="Nombres y Apellidos" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-bold">Teléfono Conductor</label>
+                            <input type="text" 
+                                   id="reg_tel_conductor" 
+                                   class="form-control font-monospace" 
+                                   placeholder="Ej: 912345678" 
+                                   maxlength="9" 
+                                   oninput="filtrarNumerosTelefonicos(this)">
+                            <div class="form-text text-muted" style="font-size: 11px;">Solo números (Máx. 9 dígitos).</div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                        <button type="reset" class="btn btn-light btn-sm px-4 fw-bold">Limpiar Campos</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold shadow-sm">
+                            <i class="bi bi-plus-circle-fill me-2"></i>Guardar en Inventario
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // 1. MÁSCARA AUTOMÁTICA EN TIEMPO REAL PARA LA PLACA (3 caracteres, guion automático y 3 caracteres más)
+    function formatearPlacaMascara(input) {
+        let limpia = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (limpia.length > 3) {
+            input.value = limpia.substring(0, 3) + '-' + limpia.substring(3, 6);
+        } else {
+            input.value = limpia;
+        }
+    }
+
+    // 2. FILTRADO PARA TELÉFONOS Y DNI
+    function filtrarNumerosTelefonicos(input) {
+        input.value = input.value.replace(/[^0-9]/g, '');
+    }
+
+    // 3. ENVÍO SEGURO DIRECTO HACIA EL NUEVO ENDPOINT EXCLUSIVO
+    async function guardarVehiculoNuevo(event) {
+        event.preventDefault();
+
+        const placaInputEl = document.getElementById('reg_placa');
+        const placaFinal = placaInputEl.value.trim().toUpperCase();
+
+        if (placaFinal.length !== 7 || !placaFinal.includes('-')) {
+            // REEMPLAZO DE ALERT NATIVO POR SWAL.FIRE() INTERACTIVO
+            Swal.fire({
+                icon: 'warning',
+                title: 'Estructura incorrecta',
+                text: 'La placa debe tener exactamente 3 caracteres, un guion y 3 caracteres finales (Ej: QAS-555).',
+                confirmButtonColor: '#3085d6'
+            });
+            return;
+        }
+
+        const datosVehiculo = {
+            placa: placaFinal,
+            tipo_vehiculo: document.getElementById('reg_tipo').value.trim().toUpperCase() || 'S/T',
+            marca: document.getElementById('reg_marca').value.trim().toUpperCase() || 'S/M',
+            modelo: document.getElementById('reg_modelo').value.trim().toUpperCase() || 'S/M',
+            color: document.getElementById('reg_color').value.trim().toUpperCase() || 'S/C',
+            agencia_propietaria: document.getElementById('reg_agencia').value.trim().toUpperCase(),
+            telefono_agencia: document.getElementById('reg_tel_agencia').value.trim() || '---',
+            dni_conductor: document.getElementById('reg_dni_conductor').value.trim(),
+            nombre_conductor: document.getElementById('reg_nombre_conductor').value.trim().toUpperCase(),
+            telefono_conductor: document.getElementById('reg_tel_conductor').value.trim() || '---',
+            id_estado: "1"
+        };
+
+        try {
+            // APUNTA AL NUEVO ENDPOINT CREADO EN PYTHON
+            const respuesta = await fetch('/api/registrar_vehiculo', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(datosVehiculo)
+            });
+
+            const resultado = await respuesta.json();
+
+            if (respuesta.ok) {
+                // REEMPLAZO DE ALERT NATIVO POR SWAL.FIRE() EXITOSO
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Registro Exitoso!',
+                    text: resultado.message,
+                    confirmButtonColor: '#198754'
+                });
+                document.getElementById('formRegistroAdmin').reset();
+            } else {
+                // REEMPLAZO DE ALERT NATIVO POR SWAL.FIRE() CON ERROR RETORNADO POR BACKEND
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de validación',
+                    text: resultado.message,
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        } catch (error) {
+            console.error("Error crítico:", error);
+            // REEMPLAZO DE ALERT NATIVO POR SWAL.FIRE() ERROR DE RED
+            Swal.fire({
+                icon: 'error',
+                title: 'Error crítico',
+                text: 'Error de red al conectar con el nuevo endpoint de registro.',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    }
+</script>
+{% endblock %}

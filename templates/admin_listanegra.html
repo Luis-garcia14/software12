@@ -1,0 +1,324 @@
+{% extends 'panel_admin.html' %}
+
+{% block contenido %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+
+<style>
+    body { 
+        background-color: #f8f9fa; 
+        font-family: 'Segoe UI', sans-serif; 
+    }
+    .card-custom { 
+        box-shadow: 0 4px 15px rgba(0,0,0,0.06); 
+        border: none; 
+        border-radius: 12px; 
+    }
+    .form-label { 
+        font-size: 13px; 
+        color: #475569; 
+    }
+    .seccion-titulo { 
+        font-size: 14px; 
+        font-weight: 700; 
+        color: #1e293b; 
+        border-bottom: 2px solid #e2e8f0; 
+        padding-bottom: 4px; 
+        margin-bottom: 15px; 
+    }
+    .badge-alerta { 
+        background-color: #ef4444; 
+        color: white; 
+        padding: 6px 12px; 
+        font-size: 11px; 
+        border-radius: 6px; 
+    }
+</style>
+
+<div class="container-fluid px-3 animate__animated animate__fadeIn">
+    
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3 class="fw-bold text-dark m-0">
+            <i class="bi bi-shield-slash-fill text-danger me-2"></i>Control de Lista Negra
+        </h3>
+        <span class="badge-alerta text-uppercase fw-bold shadow-sm">
+            <i class="bi bi-exclamation-triangle-fill me-1"></i>Módulo de Restricciones
+        </span>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-xl-6 col-lg-8 mx-auto">
+            
+            <div class="card card-custom p-4 bg-white border-start border-4 border-danger">
+                <div class="mb-3">
+                    <h5 class="fw-bold m-0 text-danger">Restringir Acceso Vehicular</h5>
+                    <p class="text-muted small">Ingrese la placa de un vehículo existente para revocar sus permisos de acceso y bloquear su entrada en las garitas automáticas.</p>
+                </div>
+
+                <form id="formListaNegra" onsubmit="agregarListaNegra(event)">
+                    
+                    <div class="seccion-titulo text-uppercase tracking-wider">
+                        <i class="bi bi-lock-fill me-2"></i>Identificación del Bloqueo
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Número de Placa <span class="text-danger">*</span></label>
+                        <input type="text" 
+                               id="ln_placa" 
+                               class="form-control form-control-lg text-uppercase fw-bold font-monospace border-danger text-danger text-center" 
+                               placeholder="AAA-123" 
+                               maxlength="7" 
+                               oninput="formatearPlacaMascara(this)"
+                               required>
+                        <div class="form-text text-muted" style="font-size: 11px;">El vehículo debe haber sido dado de alta previamente en el inventario.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-bold">Motivo del Bloqueo / Infracción <span class="text-danger">*</span></label>
+                        <textarea id="ln_motivo" 
+                                  class="form-control text-uppercase font-monospace" 
+                                  rows="4" 
+                                  placeholder="EJ: UNIDAD REPORTADA POR EXTRAVÍO / CONDUCTOR CON SANCION ADMINISTRATIVA INTERNA / FALTA DE DOCUMENTACION FISCAL" 
+                                  maxlength="255" 
+                                  required></textarea>
+                        <div class="form-text text-muted d-flex justify-content-between" style="font-size: 11px;">
+                            <span>Sea descriptivo y claro con los motivos de la restricción.</span>
+                            <span id="charCount">0 / 255</span>
+                        </div>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 border-top pt-3">
+                        <button type="reset" class="btn btn-light btn-sm px-4 fw-bold" onclick="document.getElementById('charCount').textContent = '0 / 255';">Limpiar</button>
+                        <button type="submit" class="btn btn-danger btn-sm px-4 fw-bold shadow-sm">
+                            <i class="bi bi-slash-circle me-2"></i>Aplicar Restricción
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+
+            <div class="card card-custom shadow-sm mt-4 border-0 rounded-3 bg-white">
+                <div class="card-header bg-dark text-white fw-bold d-flex align-items-center justify-content-between py-2" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                    <div class="d-flex align-items-center gap-2 py-1">
+                        <i class="bi bi-exclamation-octagon-fill text-danger"></i> 
+                        Vehículos con Restricción Activa
+                    </div>
+                    <button type="button" class="btn btn-outline-light btn-sm d-flex align-items-center gap-1 px-3" onclick="obtenerVehiculosListaNegra()" title="Actualizar lista" style="font-size: 12px;">
+                        <i class="bi bi-arrow-clockwise"></i> Actualizar
+                    </button>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0 text-center">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="font-size: 12px; color: #475569;" class="text-uppercase fw-bold">Placa</th>
+                                    <th style="font-size: 12px; color: #475569;" class="text-uppercase fw-bold">Motivo del Bloqueo / Infracción</th>
+                                    <th style="font-size: 12px; color: #475569;" class="text-uppercase fw-bold">Fecha</th>
+                                    <th style="font-size: 12px; color: #475569;" class="text-uppercase fw-bold">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaListaNegraBody" style="font-size: 13px;">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    // Inicialización del DOM al cargar la vista
+    document.addEventListener("DOMContentLoaded", function() {
+        obtenerVehiculosListaNegra();
+    });
+
+    // Contador de caracteres en tiempo real para el Textarea
+    const textarea = document.getElementById('ln_motivo');
+    const charCount = document.getElementById('charCount');
+    textarea.addEventListener('input', () => {
+        charCount.textContent = `${textarea.value.length} / 255`;
+    });
+
+    // Filtro y Máscara inteligente para el campo de número de placa (AAA-123)
+    function formatearPlacaMascara(input) {
+        let limpia = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+        if (limpia.length > 3) {
+            input.value = limpia.substring(0, 3) + '-' + limpia.substring(3, 7);
+        } else {
+            input.value = limpia;
+        }
+    }
+
+    // API GET: Renderiza dinámicamente el listado de vehículos bloqueados
+    async function obtenerVehiculosListaNegra() {
+        try {
+            const respuesta = await fetch('/api/obtener_lista_negra');
+            const data = await respuesta.json();
+            const tbody = document.getElementById('tablaListaNegraBody');
+            
+            if (!tbody) return;
+            tbody.innerHTML = ''; 
+
+            if (data.status === 'success' && data.vehiculos && data.vehiculos.length > 0) {
+                data.vehiculos.forEach(v => {
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><span class="badge bg-danger px-2 font-monospace" style="font-size: 12px;">${v.placa}</span></td>
+                            <td class="text-start text-wrap px-3 text-uppercase font-monospace" style="max-width: 250px; font-size: 11px; color: #334155;">${v.motivo_bloqueo}</td>
+                            <td class="text-muted small" style="font-size: 11px;">${v.fecha_bloqueo}</td>
+                            <td>
+                                <button onclick="quitarListaNegra(${v.id})" class="btn btn-sm btn-outline-success fw-bold py-1 px-2" style="font-size: 11px;">
+                                    <i class="bi bi-shield-check-fill me-1"></i> Quitar
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-muted py-4">
+                            <i class="bi bi-check-circle-fill text-success fs-4 d-block mb-2"></i>
+                            No hay vehículos registrados en la lista negra.
+                        </td>
+                    </tr>
+                `;
+            }
+        } catch (error) {
+            console.error("Error crítico al renderizar la lista negra:", error);
+            const tbody = document.getElementById('tablaListaNegraBody');
+            if (tbody) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" class="text-danger py-4">
+                            <i class="bi bi-exclamation-triangle-fill fs-4 d-block mb-2"></i>
+                            Error de comunicación con el módulo de datos.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    // API DELETE: Revoca de forma segura la sanción al vehículo
+    async function quitarListaNegra(idRegistro) {
+        // REEMPLAZO DE CONFIRM() NATIVO POR CUADRO DE DIÁLOGO DE CONFIRMACIÓN SWAL.FIRE()
+        Swal.fire({
+            title: '¿Está seguro de revocar la restricción?',
+            text: "El vehículo será removido de la lista negra de forma permanente.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#198754',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, remover',
+            cancelButtonText: 'Cancelar'
+        }).then(async (result) => {
+            if (result.isConfirmed) {
+                try {
+                    const respuesta = await fetch(`/api/quitar_lista_negra/${idRegistro}`, { 
+                        method: 'DELETE' 
+                    });
+                    const data = await respuesta.json();
+
+                    if (respuesta.ok && data.status === 'success') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Revocado!',
+                            text: '¡Restricción revocada con éxito!',
+                            confirmButtonColor: '#198754'
+                        });
+                        obtenerVehiculosListaNegra(); 
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error al remover',
+                            text: data.message,
+                            confirmButtonColor: '#dc3545'
+                        });
+                    }
+                } catch (error) {
+                    console.error("Error en la solicitud de borrado:", error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de red',
+                        text: 'Error de red al intentar conectar con el servidor.',
+                        confirmButtonColor: '#dc3545'
+                    });
+                }
+            }
+        });
+    }
+
+    // API POST: Envío de datos asíncronos para aplicar nueva restricción
+    async function agregarListaNegra(event) {
+        event.preventDefault();
+
+        const placaInput = document.getElementById('ln_placa').value.trim().toUpperCase();
+        const motivoInput = document.getElementById('ln_motivo').value.trim().toUpperCase();
+
+        if (placaInput.length !== 7 || !placaInput.includes('-')) {
+            // REEMPLAZO DE ALERT NATIVO POR VALIDACIÓN DE FORMATO SWAL.FIRE()
+            Swal.fire({
+                icon: 'warning',
+                title: 'Estructura incorrecta',
+                text: 'La placa debe tener exactamente 3 caracteres, un guion y 3 caracteres finales (Ej: ABC-123).',
+                confirmButtonColor: '#dc3545'
+            });
+            return;
+        }
+
+        const payload = {
+            placa: placaInput,
+            motivo_bloqueo: motivoInput
+        };
+
+        try {
+            const respuesta = await fetch('/api/registrar_lista_negra', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const resultado = await respuesta.json();
+
+            if (respuesta.ok) {
+                // REEMPLAZO DE ALERT NATIVO POR CONFIRMACIÓN EXITOSA SWAL.FIRE()
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Restricción Aplicada',
+                    text: resultado.message,
+                    confirmButtonColor: '#dc3545'
+                });
+                document.getElementById('formListaNegra').reset();
+                charCount.textContent = "0 / 255";
+                obtenerVehiculosListaNegra(); 
+            } else {
+                // REEMPLAZO DE ALERT NATIVO POR ERROR EN RESPUESTA DE SERVIDOR SWAL.FIRE()
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error del sistema',
+                    text: resultado.message,
+                    confirmButtonColor: '#dc3545'
+                });
+            }
+        } catch (error) {
+            console.error("Error en la solicitud de registro:", error);
+            // REEMPLAZO DE ALERT NATIVO POR ERROR DE COMUNICACIÓN SWAL.FIRE()
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de conexión',
+                text: 'Error de red al intentar conectar con el módulo de Lista Negra.',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    }
+</script>
+{% endblock %}
