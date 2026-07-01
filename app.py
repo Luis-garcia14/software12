@@ -9,17 +9,16 @@ import json
 import queue
 import random
 import threading
+import smtplib
 from collections import Counter
 from functools import wraps
 from datetime import datetime, timedelta, timezone
-
-# =========================================================================
-# 2. SERVICIOS DE CORREO Y GENERACIÓN DE REPORTES (PDF)
-# =========================================================================
-import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+# =========================================================================
+# 2. SERVICIOS DE GENERACIÓN DE REPORTES (PDF)
+# =========================================================================
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
@@ -47,13 +46,11 @@ app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'ejarad_tic_secret_key_pro_2
 # Estructuras de comunicación concurrente y estados de la cámara
 ultimo_frame_camara = None
 lock_frame = threading.Lock()
-cola_detecciones = queue.Queue()  # <-- Crucial para que funcionen .put() y .get() sin NameError
 
 # Buffers de estabilización y control de tiempos (Anti-ruido)
 RAFAGA_DETECCIONES = []
 ULTIMAS_DETECCIONES_IA = {}
 COOLDOWN_PLACAS = {}
-
 
 # =========================================================================
 # 🗄️ CREDENCIALES CENTRALIZADAS DE LA BASE DE DATOS
@@ -73,7 +70,6 @@ def obtener_conexion():
     """
     try:
         conexion = mysql.connector.connect(**DB_CONFIG)
-        # Realiza un ping interno; si la conexión se cayó o está inactiva, la reconecta automáticamente
         if not conexion.is_connected():
             conexion.reconnect(attempts=3, delay=2)
         return conexion
@@ -86,24 +82,25 @@ CORREO_SENDER = "tucontrolvehicularlg@gmail.com"
 CORREO_PASSWORD = "acoqznqjothxnljt"
 
 # 📡 ESTRUCTURAS DE COLAS DE DATOS EN TIEMPO REAL
-cola_detecciones = queue.Queue()  # Canal FIFO para Server-Sent Events (SSE)
+cola_detecciones = queue.Queue()   # Canal FIFO para Server-Sent Events (SSE)
 cola_procesamiento = queue.Queue() # Gestión preventiva de ráfagas vehiculares
 ultima_placa_procesada = ""
 
-
-# INICIALIZACIÓN DEL MOTOR DE INTELIGENCIA ARTIFICIAL (EASYOCR)
-
+# =========================================================================
+# INICIALIZACIÓN DEL MOTOR DE INTELIGENCIA ARTIFICIAL (TESSERACT)
+# =========================================================================
 try:
     print("[IA SERVER] Inicializando motor de reconocimiento de placas ultraligero Tesseract...")
-    # --- CORRECCIÓN: Un solo lector optimizado para evitar fugas de memoria RAM ---
-import pytesseract
-    print("[ℹ️ STATUS] Servidor de IA levantado correctamente con Tesseract y listo.")
+    # ✔️ CORREGIDO: Línea de importación removida de aquí adentro para evitar los SyntaxErrors erráticos.
+    # Solo realizamos una verificación de versión para asegurar que esté enlazado al S.O.
+    version_tesseract = pytesseract.get_tesseract_version()
+    print(f"[ℹ️ STATUS] Servidor de IA levantado correctamente. Tesseract Ver: {version_tesseract}")
 except Exception as e:
     print(f"❌ CRÍTICO: No se pudo inicializar el motor PyTesseract: {e}")
 
-
-#  FUNCIONES AUXILIARES Y HERRAMIENTAS DE SOPORTE
-
+# =========================================================================
+# FUNCIONES AUXILIARES Y HERRAMIENTAS DE SOPORTE
+# =========================================================================
 
 # VALIDADOR DE PLACAS: Verifica mediante expresiones 
 # regulares que la cadena cumpla con los estándares básicos.
@@ -145,7 +142,7 @@ def enviar_correo_bienvenida(correo_destino, nombre_operador, contrasena):
 # de búsquedas automáticas con tu diccionario simulado.
 def consultar_api_externa_vehiculo(placa):
     placa_limpia = placa.strip().upper()
-    if placa_limpia in SUNARP_SIMULADA:
+    if 'SUNARP_SIMULADA' in globals() and placa_limpia in SUNARP_SIMULADA:
         return SUNARP_SIMULADA[placa_limpia]
     return None
 
