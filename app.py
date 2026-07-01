@@ -14,7 +14,7 @@ import threading
 import time
 import mysql.connector
 import cv2
-import easyocr
+import pytesseract
 from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for, send_file
 import mysql.connector
 import numpy as np
@@ -64,12 +64,12 @@ ultima_placa_procesada = ""
 # INICIALIZACIÓN DEL MOTOR DE INTELIGENCIA ARTIFICIAL (EASYOCR)
 
 try:
-    print("[IA SERVER] Cargando modelos de reconocimiento de placas en CPU...")
+    print("[IA SERVER] Inicializando motor de reconocimiento de placas ultraligero Tesseract...")
     # --- CORRECCIÓN: Un solo lector optimizado para evitar fugas de memoria RAM ---
-    lector_ocr = easyocr.Reader(['es'], gpu=False) 
-    print("[ℹ️ STATUS] Servidor de IA levantado correctamente y listo.")
+import pytesseract
+    print("[ℹ️ STATUS] Servidor de IA levantado correctamente con Tesseract y listo.")
 except Exception as e:
-    print(f"❌ CRÍTICO: No se pudo inicializar el motor EasyOCR: {e}")
+    print(f"❌ CRÍTICO: No se pudo inicializar el motor PyTesseract: {e}")
 
 
 #  FUNCIONES AUXILIARES Y HERRAMIENTAS DE SOPORTE
@@ -2720,24 +2720,26 @@ def procesar_placa_imagen():
     conn = None
     cursor = None
     try:
-        # 📸 1. DECODIFICACIÓN DE IMAGEN Y PROCESAMIENTO OCR
+        # 📸 1. DECODIFICACIÓN DE IMAGEN Y PROCESAMIENTO OCR CON PYTESSERACT
         imagen_np = np.frombuffer(archivo.read(), np.uint8)
         fotograma = cv2.imdecode(imagen_np, cv2.IMREAD_COLOR)
         if fotograma is None: 
             return jsonify({"status": "error", "message": "Imagen ilegible o corrupta."}), 400
 
         gris = cv2.cvtColor(fotograma, cv2.COLOR_BGR2GRAY)
-        resultados = lector_ocr.readtext(gris, paragraph=False)
+        
+        # --- REEMPLAZO ULTRA LIGERO DE EASYOCR POR PYTESSERACT ---
+        # --psm 7 le indica a Tesseract que analice la imagen como una sola línea de caracteres (ideal para placas)
+        import pytesseract
+        texto_crudo = pytesseract.image_to_string(gris, config='--psm 7')
+        
+        # Limpieza estándar del texto obtenido
+        letra_limpia = re.sub(r'[^A-Z0-9-]', '', texto_crudo.upper().strip())
+        letra_limpia = letra_limpia.replace("-", "").replace(" ", "")
         
         texto_detectado = ""
-        for (caja, texto, confianza) in resultados:
-            letra_limpia = re.sub(r'[^A-Z0-9-]', '', texto.upper().strip())
-            letra_limpia = letra_limpia.replace("-", "").replace(" ", "")
-            if letra_limpia in ["PERU", "PE", "PERÚ"]:
-                continue
-            if len(letra_limpia) >= 5: 
-                texto_detectado = letra_limpia
-                break
+        if letra_limpia not in ["PERU", "PE", "PERÚ"] and len(letra_limpia) >= 5:
+            texto_detectado = letra_limpia
                 
         if not texto_detectado:
             return jsonify({"status": "error", "message": "No se reconoció un patrón de matrícula válido."}), 400
@@ -2884,7 +2886,7 @@ def procesar_placa_imagen():
 
 def asistente_ia_segundo_plano():
     global ultimo_frame_camara, ULTIMAS_DETECCIONES_IA, lock_frame, cola_detecciones
-    print("[🚀 IA OPTIMIZADA] Motor de asistencia vehicular con estabilización por ráfaga en marcha.")
+    print("[🚀 IA OPTIMIZADA] Motor de asistencia vehicular con estabilización por ráfaga en marcha (Tesseract).")
     
     TIEMPO_COOLDOWN = 3.0  # Margen de maniobra anti-saturación
     
@@ -2893,7 +2895,7 @@ def asistente_ia_segundo_plano():
     PATRON_PLACA = r'^[A-Z0-9]{3}-?[A-Z0-9]{3}$|^[A-Z0-9]{2}-?[A-Z0-9]{4}$'
     
     while True:
-        # 1. ESPACIO PARA RESPIRAR: Procesamos ~3 cuadros por segundo (0.35s libera CPU y estabiliza)
+        # 1. ESPACIO PARA RESPIRAR: Procesamos ~3 cuadros por segundo (0.15s libera CPU y estabiliza)
         time.sleep(0.15)
         
         frame_original = None
@@ -2908,23 +2910,26 @@ def asistente_ia_segundo_plano():
             alto, ancho = frame_original.shape[:2]
             frame_reducido = cv2.resize(frame_original, (int(ancho / 2), int(alto / 2)))
             gris = cv2.cvtColor(frame_reducido, cv2.COLOR_BGR2GRAY)
-            resultados = lector_ocr.readtext(gris, paragraph=False)
+            
+            # --- NUEVA LECTURA ULTRA LIGERA CON TESSERACT ---
+            import pytesseract
+            texto_crudo = pytesseract.image_to_string(gris, config='--psm 7')
+            
+            # Limpieza del texto extraído de la cámara
+            letra_limpia = re.sub(r'[^A-Z0-9-]', '', texto_crudo.upper().strip())
+            letra_limpia = letra_limpia.replace("-", "").replace(" ", "")
             
             placa_candidata = ""
-            for (caja, texto, confianza) in resultados:
-                letra_limpia = re.sub(r'[^A-Z0-9-]', '', texto.upper().strip())
-                letra_limpia = letra_limpia.replace("-", "").replace(" ", "")
-                if letra_limpia in ["PERU", "PE", "PERÚ", "PUBLICO", "SERVICIO"]:
-                    continue
-                if len(letra_limpia) >= 5 and len(letra_limpia) <= 8: 
-                    placa_candidata = letra_limpia
-                    break
+            if letra_limpia in ["PERU", "PE", "PERÚ", "PUBLICO", "SERVICIO"]:
+                continue
+            if len(letra_limpia) >= 5 and len(letra_limpia) <= 8: 
+                placa_candidata = letra_limpia
             
             # Si el fotograma está vacío o no leyó nada con la longitud correcta, saltamos
             if not placa_candidata:
                 continue
                 
-            # Filtro estricto por formato (Regex). Si lee ruidos como "VOMNCC" o "AOUCC", se descartan aquí
+            # Filtro estricto por formato (Regex). Si lee ruidos erráticos se descartan aquí
             if not re.match(PATRON_PLACA, placa_candidata):
                 continue
 
@@ -3123,6 +3128,7 @@ def ultimo_acceso_ia():
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
+
 @app.route('/video_feed')
 def video_feed():
     return Response(generar_frames_camara(), mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -3144,17 +3150,18 @@ def stream_placas_detectadas():
     
     return Response(generar_eventos(), mimetype='text/event-stream')
 
+
 # 5. DISPARADOR INMEDIATO DEL HILO (Mantiene el sistema despierto en segundo plano)
-hilo_ia = threading.Thread(target=asistente_ia_segundo_plano, daemon=True)
-hilo_ia.start()
+# Se valida 'WERKZEUG_RUN_MAIN' para evitar que con debug=True el hilo se inicie dos veces.
+import os
+if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+    hilo_ia = threading.Thread(target=asistente_ia_segundo_plano, daemon=True)
+    hilo_ia.start()
+    print("[🧵 THREADING] Hilo de asistencia de IA en segundo plano iniciado correctamente.")
 
 
-
-
-#  ARRANQUE OFICIAL DEL SERVIDOR
-   
-  
+# --- ARRANQUE OFICIAL DEL SERVIDOR ---
 
 if __name__ == '__main__':
-    # host='0.0.0.0' le permite a tu celular conectarse usando la IP de la PC
+    # host='0.0.0.0' le permite a tu celular/dispositivos conectarse usando la IP de la PC
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True)
