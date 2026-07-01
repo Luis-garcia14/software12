@@ -1,0 +1,6 @@
+Flask
+mysql-connector-python
+opencv-python-headless
+easyocr
+numpy
+reportlab
