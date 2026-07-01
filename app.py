@@ -1,55 +1,85 @@
-# IMPORTACIÓN DE LIBRERÍAS Y MÓDULOS ESENCIALES
-
-from datetime import datetime
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-import time
+# =========================================================================
+# 1. IMPORTACIÓN DE LIBRERÍAS DEL SISTEMA Y PROTOCOLOS
+# =========================================================================
+import os
+import re
 import io
+import time
 import json
 import queue
 import random
-import re
-import smtplib
 import threading
-import time
-import mysql.connector
-import cv2
-import pytesseract
-from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for, send_file
-import mysql.connector
-import numpy as np
-from datetime import datetime, timedelta, timezone
-import random
-# Librerías de ReportLab para la generación de reportes PDF
-from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter
-from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
-from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
 from collections import Counter
 from functools import wraps
-from flask import session, redirect, url_for, flash
-ultimo_frame_camara = None  # <-- ESTA ES LA QUE TE FALTA DEFINIR GLOBALMENTE
-COOLDOWN_PLACAS = {}
-RAFAGA_DETECCIONES = []
+from datetime import datetime, timedelta, timezone
+
+# =========================================================================
+# 2. SERVICIOS DE CORREO Y GENERACIÓN DE REPORTES (PDF)
+# =========================================================================
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+
+# =========================================================================
+# 3. PROCESAMIENTO DE IMÁGENES, IA (OCR) Y BASE DE DATOS
+# =========================================================================
+import cv2
+import numpy as np
+import pytesseract
+import mysql.connector
+
+# =========================================================================
+# 4. FRAMEWORK WEB (FLASK)
+# =========================================================================
+from flask import Flask, render_template, request, jsonify, Response, session, redirect, url_for, flash, send_file
+
+# =========================================================================
+# 5. CONFIGURACIÓN DE INSTANCIA Y VARIABLES GLOBALES DE CONTROL IA
+# =========================================================================
+app = Flask(__name__)
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'ejarad_tic_secret_key_pro_2026')
+
+# Estructuras de comunicación concurrente y estados de la cámara
+ultimo_frame_camara = None
 lock_frame = threading.Lock()
+cola_detecciones = queue.Queue()  # <-- Crucial para que funcionen .put() y .get() sin NameError
+
+# Buffers de estabilización y control de tiempos (Anti-ruido)
+RAFAGA_DETECCIONES = []
 ULTIMAS_DETECCIONES_IA = {}
-from functools import wraps
-
-from functools import wraps
-from flask import session, redirect, url_for, flash
+COOLDOWN_PLACAS = {}
 
 
-
-
+# =========================================================================
 # 🗄️ CREDENCIALES CENTRALIZADAS DE LA BASE DE DATOS
+# =========================================================================
 DB_CONFIG = {
-    'host': 'localhost',
-    'user': 'root',
-    'password': '',
-    'database': 'sistema_vehicular'
+    'host': os.environ.get('DB_HOST'),
+    'user': os.environ.get('DB_USER'),
+    'password': os.environ.get('DB_PASSWORD'),
+    'database': os.environ.get('DB_DATABASE'),
+    'port': int(os.environ.get('DB_PORT', 3306))
 }
+
 def obtener_conexion():
-    return mysql.connector.connect(**DB_CONFIG)
+    """
+    Establece y retorna una conexión limpia a la base de datos MySQL.
+    Incluye un mecanismo de auto-reconexión activa para entornos en la nube (Railway/Render).
+    """
+    try:
+        conexion = mysql.connector.connect(**DB_CONFIG)
+        # Realiza un ping interno; si la conexión se cayó o está inactiva, la reconecta automáticamente
+        if not conexion.is_connected():
+            conexion.reconnect(attempts=3, delay=2)
+        return conexion
+    except mysql.connector.Error as err:
+        print(f"❌ ERROR CRÍTICO AL CONECTAR A LA BASE DE DATOS: {err}")
+        raise err
 
 # 📧 CONFIGURACIÓN CENTRALIZADA DEL SERVIDOR DE CORREOS (Gmail SMTP)
 CORREO_SENDER = "tucontrolvehicularlg@gmail.com"
@@ -119,9 +149,6 @@ def consultar_api_externa_vehiculo(placa):
         return SUNARP_SIMULADA[placa_limpia]
     return None
 
-
-app = Flask(__name__)
-app.secret_key = 'ejarad_tic_secret_key_pro_2026'
 
 # =========================================================================
 # 1. ESCUDOS DE SEGURIDAD (DECORADORES) Y CONTROL DE CACHÉ
@@ -2720,7 +2747,7 @@ def procesar_placa_imagen():
     conn = None
     cursor = None
     try:
-        # 📸 1. DECODIFICACIÓN DE IMAGEN Y PROCESAMIENTO OCR CON PYTESSERACT
+        # 📸 1. DECODIFICACIÓN DE IMAGEN Y PROCESAMIENTO OCR
         imagen_np = np.frombuffer(archivo.read(), np.uint8)
         fotograma = cv2.imdecode(imagen_np, cv2.IMREAD_COLOR)
         if fotograma is None: 
@@ -2728,12 +2755,9 @@ def procesar_placa_imagen():
 
         gris = cv2.cvtColor(fotograma, cv2.COLOR_BGR2GRAY)
         
-        # --- REEMPLAZO ULTRA LIGERO DE EASYOCR POR PYTESSERACT ---
-        # --psm 7 le indica a Tesseract que analice la imagen como una sola línea de caracteres (ideal para placas)
-        import pytesseract
+        # Lectura directa usando la importación global
         texto_crudo = pytesseract.image_to_string(gris, config='--psm 7')
         
-        # Limpieza estándar del texto obtenido
         letra_limpia = re.sub(r'[^A-Z0-9-]', '', texto_crudo.upper().strip())
         letra_limpia = letra_limpia.replace("-", "").replace(" ", "")
         
@@ -2771,7 +2795,7 @@ def procesar_placa_imagen():
             datos_evento = {
                 "id_acceso": 0,
                 "placa": placa_con_guion,
-                "vehiculo_oficial": True, # Forzado como oficial para que ejecute el bloqueo directo
+                "vehiculo_oficial": True,
                 "registrado": False, 
                 "tipo_movimiento": "Bloqueado", 
                 "tiempo_estancia": "---",
@@ -2779,7 +2803,7 @@ def procesar_placa_imagen():
                 "ruta_imagen": ruta_imagen_simulada
             }
         else:
-            # 🔍 3. BÚSQUEDA EXCLUSIVA EN TU TABLA DE VEHÍCULOS OFICIALES
+            # 🔍 3. BÚSQUEDA EXCLUSIVA EN VEHÍCULOS OFICIALES
             cursor.execute("""
                 SELECT v.placa, v.marca, v.modelo, v.color, v.tipo_vehiculo, v.id_estado
                 FROM vehiculos v
@@ -2789,27 +2813,18 @@ def procesar_placa_imagen():
             vehiculo = cursor.fetchone()
             while cursor.nextset(): pass
             
-            # -------------------------------------------------------------------------
-            # CASO A: NO ES VEHÍCULO OFICIAL (No existe en tu tabla de MySQL)
-            # -------------------------------------------------------------------------
             if not vehiculo:
-                # FRENAMOS EL FLUJO: No insertamos nada en la base de datos de accesos ni vehículos
                 datos_evento = {
                     "id_acceso": 0,
                     "placa": placa_con_guion,
-                    "vehiculo_oficial": False, # <-- Esto activa los botones [Sí] o [No] en JavaScript
+                    "vehiculo_oficial": False,
                     "registrado": True,
                     "tipo_movimiento": "Entrada",
                     "tiempo_estancia": "---",
                     "message": "Vehículo nuevo detectado. Requiere autorización.",
                     "ruta_imagen": ruta_imagen_simulada
                 }
-            
-            # -------------------------------------------------------------------------
-            # CASO B: SÍ ES VEHÍCULO OFICIAL (Existe en tu tabla de MySQL)
-            # -------------------------------------------------------------------------
             else:
-                # ⏱️ COMPUTAR ENTRADA O SALIDA AUTOMÁTICA EN HISTORIAL
                 cursor.execute("""
                     SELECT id, fecha_ingreso FROM historial_accesos 
                     WHERE REPLACE(placa, '-', '') = %s AND fecha_salida IS NULL 
@@ -2843,14 +2858,13 @@ def procesar_placa_imagen():
 
                 conn.commit()
 
-                # PERSISTENCIA DE CAPTURA
                 cursor.execute("INSERT INTO capturas_ia (id_acceso, ruta_imagen) VALUES (%s, %s)", (id_nuevo_acceso, ruta_imagen_simulada))
                 conn.commit()
 
                 datos_evento = {
                     "id_acceso": id_nuevo_acceso,
                     "placa": placa_con_guion, 
-                    "vehiculo_oficial": True, # <-- Flujo normal directo automático
+                    "vehiculo_oficial": True,
                     "registrado": True, 
                     "tipo_movimiento": tipo_movimiento_ia, 
                     "tiempo_estancia": tiempo_estancia,
@@ -2861,7 +2875,6 @@ def procesar_placa_imagen():
         cursor.close()
         conn.close()
         
-        # Enviar en vivo al stream de la interfaz web
         cola_detecciones.put(datos_evento) 
         
         return jsonify({
@@ -2876,12 +2889,6 @@ def procesar_placa_imagen():
         if cursor: cursor.close()
         if conn: conn.close()
         return jsonify({"status": "error", "message": str(e)}), 500
-
-
-#  MOTOR DE STREAMING DE VIDEO Y EVENTOS EN TIEMPO REAL 
-#  CAMARA STREAM: Captura los fotogramas de la webcam local y 
-# los transmite continuamente en formato JPG.
-# 1. VARIABLES GLOBALES (Para compartir los ojos de la cámara con la IA sin lag)
 
 
 def asistente_ia_segundo_plano():
@@ -2906,13 +2913,14 @@ def asistente_ia_segundo_plano():
         if frame_original is None:
             continue
             
+        cursor_live = None
+        conn_live = None
         try:
             alto, ancho = frame_original.shape[:2]
             frame_reducido = cv2.resize(frame_original, (int(ancho / 2), int(alto / 2)))
             gris = cv2.cvtColor(frame_reducido, cv2.COLOR_BGR2GRAY)
             
-            # --- NUEVA LECTURA ULTRA LIGERA CON TESSERACT ---
-            import pytesseract
+            # --- LECTURA ULTRA LIGERA CON TESSERACT GLOBAL ---
             texto_crudo = pytesseract.image_to_string(gris, config='--psm 7')
             
             # Limpieza del texto extraído de la cámara
@@ -2967,8 +2975,8 @@ def asistente_ia_segundo_plano():
             # Formateamos con guion estético para visualización
             placa_con_guion = placa_sin_guion if len(placa_sin_guion) < 4 else f"{placa_sin_guion[:3]}-{placa_sin_guion[3:]}"
             
-            # Conexión a Base de Datos
-            conn_live = mysql.connector.connect(**DB_CONFIG)
+            # Conexión optimizada usando tu pool de base de datos automatizado
+            conn_live = obtener_conexion()
             cursor_live = conn_live.cursor(dictionary=True)
             
             # ----------------=================================================
@@ -3057,6 +3065,12 @@ def asistente_ia_segundo_plano():
 
         except Exception as live_err:
             print(f"⚠️ Error crítico en hilo de asistencia de IA: {live_err}")
+            if cursor_live:
+                try: cursor_live.close()
+                except: pass
+            if conn_live:
+                try: conn_live.close()
+                except: pass
 
 # 3. TRABAJADOR A (Muestra el video en la pantalla súper fluido sin detenerse jamás)
 def generar_frames_camara():
