@@ -1,7 +1,7 @@
 Flask
 mysql-connector-python
 opencv-python-headless
-easyocr
+pytesseract
 numpy
 reportlab
 gunicorn
